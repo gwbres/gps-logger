@@ -61,15 +61,22 @@ def allow_external_antenna(tty, allowed):
 	write_cmd(tty, cmd)
 
 def print_help():
-	string = " █▀▀█ ▒█▀▀█ ▒█▀▀▀█ 　 ▀▀█▀▀ ▒█▀▀▀█ ▒█▀▀▀█ ▒█░░░ ▒█▀▀▀█\n▒█░▄▄ ▒█▄▄█ ░▀▀▀▄▄ 　 ░▒█░░ ▒█░░▒█ ▒█░░▒█ ▒█░░░ ░▀▀▀▄▄\n▒█▄▄█ ▒█░░░ ▒█▄▄▄█ 　 ░▒█░░ ▒█▄▄▄█ ▒█▄▄▄█ ▒█▄▄█ ▒█▄▄▄█\n\n"
-	string += "--start-logging\n\tGPS module starts recording frame\n\n"
-	string += "--stop-logging\n\tModule stops recording frames\n\n"
-	string += "--erase-flash\n\tErases frames stored into internal memory\n\n"
-	string += "--dump\n\tDumps all frames stored in internal memory into a file\n\n"
-	string += "\n\t>>> advanced\n"
-	string += "--fix-rate\n\tSet GPS locking rate\n\n"
-	string += "--rate\n\tSet GPS frames update rate [10Hz,5Hz,2Hz,1Hz,200mHz,100mHz]\n"
+	string = " █▀▀█ ▒█▀▀█ ▒█▀▀▀█ 　 ▀▀█▀▀ ▒█▀▀▀█ ▒█▀▀▀█ ▒█░░░ ▒█▀▀▀█\n▒█░▄▄ ▒█▄▄█ ░▀▀▀▄▄ 　 ░▒█░░ ▒█░░▒█ ▒█░░▒█ ▒█░░░ ░▀▀▀▄▄\n▒█▄▄█ ▒█░░░ ▒█▄▄▄█ 　 ░▒█░░ ▒█▄▄▄█ ▒█▄▄▄█ ▒█▄▄█ ▒█▄▄▄█\n"
+
+	string += "\nPMTK module:\n"
+	string += "--start-logging\n\tGPS module starts recording frame\n"
+	string += "--stop-logging\n\tModule stops recording frames\n"
+	string += "--erase-flash\n\tErases frames stored into internal memory\n"
+	string += "--dump\n\tDumps all frames stored in internal memory into a file\n"
+	
+	string += "\nPMTK module [advanced]\n"
 	string += "--baud\n\tSet GPS serial rate [9600,57600] b/s\n"
+	string += "--fix-rate\n\tSet LED fix blink rate\n"
+	string += "--nmea-rate\n\tSet GPS frames update rate [10Hz,5Hz,2Hz,1Hz,200mHz,100mHz]\n"
+
+	string += "\nNMEA data:\n"
+	string += "--cv-nmea-kml\n\tConverts .nmea file to .kml file (google earth, etc..)\n"
+
 	print(string)
 
 # Dumps all nmea frames into a .nmea file
