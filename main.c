@@ -19,6 +19,7 @@
 	THE SOFTWARE.
 */
 
+#include "GPS.h"
 #include <string.h>
 #include <msp430g2553.h>
 
@@ -44,6 +45,7 @@ void init_uart(void);
 void init_timers(void);
 void init_platform(void);
 void welcome(void);
+void pmtk_module_tests(void);
 	
 int main(int argc, char **argv){
 	init_platform();
@@ -67,8 +69,6 @@ void init_platform(void){
 	init_gpio();
 	init_timers();
 	init_uart();
-	welcome();
-
 	_mask |= GIE;
 	_mask |= P1IE;
 #ifdef LOW_POWER
@@ -76,6 +76,9 @@ void init_platform(void){
 	_mask |= LPM3_bits;
 #endif
 	_BIS_SR(_mask); 
+
+	welcome();
+	pmtk_module_tests();
 }
 
 void init_timers(void){
@@ -113,22 +116,38 @@ void init_uart(void){
 }
 
 void welcome(void){
-	int _head = 0;
 	tx_ptr = 0;
-
-	strcpy(tx_buf+_head, "\r\n\r\n------------------\r\n");
-	_head += strlen("\r\n\r\n------------------\r\n");
-
-	strcpy(tx_buf+_head, "| GPS logger v1.0 |\r\n");
-	_head += strlen("| GPS logger v1.0 |\r\n");
-	
-	strcpy(tx_buf+_head, "------------------\r\n");
-	_head += strlen("------------------\r\n");
-
-	bytes_to_send = strlen(tx_buf);
+	strcpy(tx_buf, "\r\n| GPS logger v1.0 |\r\n");
+	bytes_to_send = strlen(tx_buf)+4;
 	UC0IE |= UCA0TXIE; // TX IE
 	while (UCA0STAT & UCBUSY);
 }
+
+void pmtk_module_tests(void){
+// baud:
+	GPS_set_baud(9600); // tx_buf, &bytes_to_send, &tx_ptr);
+	GPS_set_baud(57600); // tx_buf, &bytes_to_send, &tx_ptr);
+// flash:
+	GPS_start_logging();
+	GPS_stop_logging();
+	GPS_erase_flash();
+// FIX:
+	GPS_set_fixblink_rate(PMTK_FIX_RATE_100mhz);
+	GPS_set_fixblink_rate(PMTK_FIX_RATE_200mhz);
+	GPS_set_fixblink_rate(PMTK_FIX_RATE_1hz);
+	GPS_set_fixblink_rate(PMTK_FIX_RATE_5hz);
+// NMEA:
+	GPS_NMEA_output(PMTK_NMEA_OFF);
+	GPS_NMEA_output(PMTK_NMEA_ONLY_RMC_GGA);
+	GPS_NMEA_output(PMTK_NMEA_ALL_DATA);
+// others:
+	GPS_stand_by();
+	GPS_antenna_mode(PMTK_NO_ANTENNA);
+	GPS_antenna_mode(PMTK_USE_ANTENNA);
+	GPS_enable_WAAS();
+	GPS_enable_SBAS();
+}
+
 
 #pragma vector = TIMER0_A0_VECTOR
 __interrupt void CCR0_ISR(void){
