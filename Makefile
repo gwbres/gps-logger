@@ -1,9 +1,10 @@
-BINDIR = /usr/bin
-CC = $(BINDIR)/msp430-gcc
+MSPDIR ?= /usr/bin
+CC = $(MSPDIR)/msp430-gcc
 
 MCU = msp430g2553
 
 CFLAGS = -0s -Wall -g -mmcu=$(MCU)
+CFLAGS += -DLOW_POWER
 
 OBJ = main
 
