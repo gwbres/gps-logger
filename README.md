@@ -12,7 +12,6 @@ compile the application with
 make
 ```
 
-
 # Flash the program onto MSP430x
 
 flash with
