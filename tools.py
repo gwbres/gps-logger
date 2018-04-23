@@ -68,12 +68,28 @@ def print_help():
 	print(string)
 
 # Converts parsed coordinates to degrees/min/secs
-def coord_to_deg_min(coord):
+def coord_to_deg_min(coord, islong=False):
 	#2503.6319 i.e ddmm.mmmm: 25°03.6319' = 25°03'37,914"
-	deg = coord.split(".")[0][0:1]
-	min = coord.split(".")[0][2:3]
-	secs = coord.split(".")[1]
+	if (islong):
+		deg = coord.split(".")[0][0:3]
+		min = coord.split(".")[0][3:5]
+		secs = coord.split(".")[1]
+	else:
+		deg = coord.split(".")[0][0:2]
+		min = coord.split(".")[0][2:4]
+		secs = coord.split(".")[1]
 	return [deg,min,secs]
+
+# converts GPS coordinates to decimal degrees
+# coord: ddmm.ssss
+def GPS_to_decimal_degrees(coord, islong=False):
+	[deg,min,secs] = coord_to_deg_min(coord, islong=islong)
+	string = "{:s}{:s}.{:s}".format(deg,min,secs)
+	D = int(deg)
+	M = int(min)
+	S = 60*float("0.{:s}".format(secs))
+	DDec = D+M/60+S/3600
+	return DDec
 
 def knots_to_kmph(knots):
 	mph = knots*1.15078
@@ -169,17 +185,25 @@ def nmea_to_kml(nmea, kml):
 
 	# initialize kml file
 	kmlfd.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-	kmlfd.write('<kml xmlns="http://www.opengis.net/kml/2.2">\n')
-	kmlfd.write(' <Document>\n')
+	kmlfd.write('<kml xmlns="http://earth.google.com/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">\n')
+	kmlfd.write('<Folder>\n')
 
-	# set one style for polygons drawing
-	# declare a style to group waypoints
-	kmlfd.write('\t<Style id="greenPolyLine">\n')
-	kmlfd.write('\t\t<LineStyle>\n')
-	kmlfd.write('\t\t\t<color>7fff00ff</color>\n')
-	kmlfd.write('\t\t\t<width>4</width>\n')
-	kmlfd.write('\t\t</LineStyle>\n')
-	kmlfd.write('\t</Style>\n')
+	# track infos
+	kmlfd.write('\t<name>Imported from {:s}</name>\n'.format(nmea))
+	kmlfd.write('\t<Placemark>\n')
+	kmlfd.write('\t\t<name>Track</name>\n')
+
+	# track style
+	kmlfd.write('\t\t<Style>\n')
+	kmlfd.write('\t\t\t<LineStyle>\n')
+	kmlfd.write('\t\t\t\t<color>00cc00cc</color>\n')
+	kmlfd.write('\t\t\t\t<width>4</width>\n')
+	kmlfd.write('\t\t\t</LineStyle>\n')
+	kmlfd.write('\t\t</Style>\n')
+
+	# track
+	kmlfd.write('\t\t<gx:Track>\n')
+	kmlfd.write('\t\t\t<altitudeMode>relativeToGround</altitudeMode>\n')
 
 	for line in nmeafd:
 		GPS = None
@@ -198,42 +222,39 @@ def nmea_to_kml(nmea, kml):
 			if (GPS.get_lat() == None):
 				continue
 
-			kmlfd.write('\t<Placemark>\n')
-			kmlfd.write("\t  <altitudeMode>relativeToGround</altitudeMode>\n")
-
-			kmlfd.write('\t  <TimeStamp>\n')
 			if (GPS._type() == "GPRMC"):
 				d = GPS.get_date()
 				day = d[0:1]
 				month = d[2:3]
 				year = d[4:5]
 			else:
-				d = date.today()
-				year = str(d.year)
-				month = str(d.month)
-				day = str(d.day)
+				#d = date.today()
+				year = "" 
+				month = "" 
+				day = "" 
 
 			utc = GPS.get_utc()
 			h = utc.split(".")[0][0:1]
 			m = utc.split(".")[0][2:3]
 			s = utc.split(".")[0][4:5]
 
-			kmlfd.write('\t  <when>20{:s}-{:s}-{:s}T{:s}:{:s}:{:s}Z</when>\n'.format(
-				year,month,day,h,m,s	
-			))
-			kmlfd.write('\t  </TimeStamp>\n')
+			kmlfd.write('\t\t\t<when>20{:s}-{:s}-{:s}T{:s}:{:s}:{:s}Z</when>\n'.format(year,month,day,h,m,s))
 
-			kmlfd.write('\t  <styleUrl>#greenPolyLine</styleUrl>\n')
+			LDec = GPS_to_decimal_degrees(GPS.get_lat()[0])
+			if (GPS.get_lat()[0] == "S"):
+				LDec *= (-1)
 
-			kmlfd.write('\t  <Point>\n')
-			kmlfd.write('\t\t<coordinates>{:s},{:s},{:s}</coordinates>\n'.format(
-				GPS.get_lat()[0],GPS.get_long()[0],GPS.get_alt()
-			))
-			kmlfd.write('\t  </Point>\n')
-			kmlfd.write('\t</Placemark>\n')
+			lDec = GPS_to_decimal_degrees(GPS.get_long()[0], islong=True)
+			if (GPS.get_long()[0] == "W"):
+				lDec *= (-1)
 
+			kmlfd.write('\t\t\t<gx:coord>{:f} {:f} {:f}</gx:coord>\n'.format(lDec, LDec, float(GPS.get_alt())))
+
+	kmlfd.write('\t\t</gx:Track>\n')
+	
 	# finalize kml file 
-	kmlfd.write(' </Document>\n')
+	kmlfd.write('\t</Placemark>\n')
+	kmlfd.write('\t</Folder>\n')
 	kmlfd.write('</kml>\n')
 
 	nmeafd.close()
@@ -244,12 +265,20 @@ def nmea_to_gpx(nmea, gpx):
 	nmeafd = open(nmea,"r")
 	gpxfd = open(gpx,"w")
 
-	gpxfd.write('<?xml version="1.0" encoding="UTF-8" standalone="no" ?>\n')
-	gpxfd.write('<gpx xmlns="http://www.topografix.com/GPX/1/1" creator="byHand" version="1.1"\n')
-	gpxfd.write('  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\n') 
-	gpxfd.write('  xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">\n')
+	gpxfd.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+	gpxfd.write('<gpx version="1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\n')
+	gpxfd.write(' xmlns="http://www.topografix.com/GPX/1/0"\n')
+	gpxfd.write(' xsi:schemaLocation="http://www.topografix.com/GPX/1/0 http://www.topografix.com/GPX/1/0/gpx.xsd">\n')
+
+	gpxfd.write('\t<name>{:s}</name>\n'.format(nmea))
+	gpxfd.write('\t<desc>Imported from {:s}</desc>\n'.format(nmea))
+	gpxfd.write('\t<trk>\n')
+	gpxfd.write('\t\t<name>Track</name>\n')
+	gpxfd.write('\t\t<number>1</number>\n')
+	gpxfd.write('\t\t<trkseg>\n')
 
 	for line in nmeafd:
+
 		GPS = None
 		line = line.strip() # cleanup
 		if not(line):
@@ -263,8 +292,17 @@ def nmea_to_gpx(nmea, gpx):
 			continue
 
 		if (GPS is not None):
-			gpxfd.write('<wpt lat="{:s}" lon="{:s}">\n'.format(GPS.get_lat()[0],GPS.get_long()[0]))
-			gpxfd.write('\t<ele>{:s}</ele>\n'.format(GPS.get_alt()))
+			LDec = GPS_to_decimal_degrees(GPS.get_lat()[0])
+			if (GPS.get_lat()[1] == "S"):
+				LDeg *= (-1)
+			
+			lDec = GPS_to_decimal_degrees(GPS.get_long()[0], islong=True)
+			if (GPS.get_long()[1] == "W"):
+				lDec *= (-1)
+
+			gpxfd.write('\t\t\t<trkpt lat="{:f}" lon="{:f}">\n'.format(LDec, lDec))
+			gpxfd.write('\t\t\t\t<ele>{:s}</ele>\n'.format(GPS.get_alt()))
+
 			if (GPS._type() == "GPRMC"):
 				date = GPS.get_date()
 				day = date[0:1]
@@ -276,12 +314,14 @@ def nmea_to_gpx(nmea, gpx):
 				m = utc.split(".")[0][2:3]
 				s = utc.split(".")[0][4:5]
 
-				gpxfd.write('\t<time>20{:s}-{:s}-16T{:s}:{:s}:{:s}Z</time>\n'
+				gpxfd.write('\t\t\t\t<time>20{:s}-{:s}-16T{:s}:{:s}:{:s}Z</time>\n'
 					.format(year,month,day,h,m,s)
 				)
-			
-			gpxfd.write('</wpt>\n')
 
+			gpxfd.write('\t\t\t</trkpt>\n')
+			
+	gpxfd.write('\t\t</trkseg>\n')
+	gpxfd.write('\t</trk>\n')
 	gpxfd.write('</gpx>')
 	nmeafd.close()
 	gpxfd.close()
@@ -312,7 +352,6 @@ def main(argv):
 		return -1
 
 	for flag in argv:
-		print(flag)
 		
 		if flag == "--start-logging":
 			print(write_cmd(open_serial(argv[0]), PMKT_START_LOGGER))
