@@ -48,19 +48,6 @@ def write_cmd(tty, cmd):
 	sleep(0.1)
 	return tty.readline()
 
-def enable_SBAS(tty):
-	write_cmd(tty, PMTK_ENABLE_SBAS)
-
-def enable_WAAS(tty):
-	write_cmd(tty, PMTK_ENABLE_WAAS)
-
-def allow_external_antenna(tty, allowed):
-	if (allowed):
-		cmd = PGCMD_ANTENNA
-	else:
-		cmd = PGCMD_NOANTENNA
-	write_cmd(tty, cmd)
-
 def print_help():
 	string = " █▀▀█ ▒█▀▀█ ▒█▀▀▀█ 　 ▀▀█▀▀ ▒█▀▀▀█ ▒█▀▀▀█ ▒█░░░ ▒█▀▀▀█\n▒█░▄▄ ▒█▄▄█ ░▀▀▀▄▄ 　 ░▒█░░ ▒█░░▒█ ▒█░░▒█ ▒█░░░ ░▀▀▀▄▄\n▒█▄▄█ ▒█░░░ ▒█▄▄▄█ 　 ░▒█░░ ▒█▄▄▄█ ▒█▄▄▄█ ▒█▄▄█ ▒█▄▄▄█\n"
 
@@ -68,7 +55,6 @@ def print_help():
 	string += "--start-logging\n\tGPS module starts recording frame\n"
 	string += "--stop-logging\n\tModule stops recording frames\n"
 	string += "--erase-flash\n\tErases frames stored into internal memory\n"
-	string += "--dump\n\tDumps all frames stored in internal memory into a file\n"
 	
 	string += "\nPMTK module [advanced]\n"
 	string += "--baud\n\tSet GPS serial rate [9600,57600] b/s\n"
@@ -100,7 +86,7 @@ class GPGGA:
 		self.utc = "000000.00"
 		self.lat = None
 		self.long = None
-		self.alt = None
+		self.alt = "0" 
 		self.hdop = None
 
 		content = csv.split(",")[1:-1] # remove header and checksum
@@ -116,15 +102,9 @@ class GPGGA:
 		if ((content[7] is not None)): # could be missing
 			self.hdop = content[7]
 		
-		if (content[8] is not None): # might be missing
+		if (content[8] != ""): # might be missing
 			self.alt = content[8] # content[9]='M' for meters
 
-	def __str__(self):
-		print("Time stamp: {:s}\n".format(self.get_utc()))
-		print("Latitude: {:f}\n".format(self.get_lat()))
-		print("Longitude: {:f}\n".format(self.get_long()))
-		print("Altitude: {:f}\n".format(self.get_alt()))
-		
 	def get_utc(self):
 		return self.utc
 	
@@ -143,11 +123,13 @@ class GPGGA:
 	def _type(self):
 		return "GPGGA"
 
+# GPRMC 
+# class descriptor for RMC frames
 class GPRMC:
 	def __init__(self, csv):
 		self.utc = "000000.00"
 		self.alt = None
-		self.lat = None
+		self.lat = "0" 
 		self.long = None
 		
 		content = csv.split(",")[1:-1] # remove header & checksum
@@ -181,8 +163,6 @@ class GPRMC:
 		return self.date
 
 # Converts .nmea file into .kml file
-# to use in most graphical GPS coordinates displayers
-# uses GPGGA frames only
 def nmea_to_kml(nmea, kml):
 	nmeafd = open(nmea, "r")
 	kmlfd = open(kml, "w")
@@ -201,16 +181,6 @@ def nmea_to_kml(nmea, kml):
 	kmlfd.write('\t\t</LineStyle>\n')
 	kmlfd.write('\t</Style>\n')
 
-	# all waypoints for this session will be 
-	# grouped together
-	"""
-	kmlfd.write("\t<Placemark>\n")
-	kmlfd.write("\t <styleUrl>#greenPolyLine</styleUrl>\n")
-	kmlfd.write("\t <LineString>\n")
-	kmlfd.write("\t <altitudeMode>absolute</altitudeMode>\n")
-	kmlfd.write("\t <coordinates>\n")
-	"""
-
 	for line in nmeafd:
 		GPS = None
 		line = line.strip() # cleanup
@@ -221,12 +191,15 @@ def nmea_to_kml(nmea, kml):
 			GPS = GPGGA(line)
 		elif (line.startswith("$GPRMC")):
 			GPS = GPRMC(line)
+		else:
+			continue
 
 		if (GPS is not None):
 			if (GPS.get_lat() == None):
 				continue
 
 			kmlfd.write('\t<Placemark>\n')
+			kmlfd.write("\t  <altitudeMode>relativeToGround</altitudeMode>\n")
 
 			kmlfd.write('\t  <TimeStamp>\n')
 			if (GPS._type() == "GPRMC"):
@@ -286,10 +259,11 @@ def nmea_to_gpx(nmea, gpx):
 			GPS = GPGGA(line)
 		elif (line.startswith("$GPRMC")):
 			GPS = GPRMC(line) 
+		else:
+			continue
 
 		if (GPS is not None):
 			gpxfd.write('<wpt lat="{:s}" lon="{:s}">\n'.format(GPS.get_lat()[0],GPS.get_long()[0]))
-			gpxfd.write('\t<name>waypoint</name>\n')
 			gpxfd.write('\t<ele>{:s}</ele>\n'.format(GPS.get_alt()))
 			if (GPS._type() == "GPRMC"):
 				date = GPS.get_date()
@@ -305,7 +279,7 @@ def nmea_to_gpx(nmea, gpx):
 				gpxfd.write('\t<time>20{:s}-{:s}-16T{:s}:{:s}:{:s}Z</time>\n'
 					.format(year,month,day,h,m,s)
 				)
-
+			
 			gpxfd.write('</wpt>\n')
 
 	gpxfd.write('</gpx>')
@@ -314,8 +288,8 @@ def nmea_to_gpx(nmea, gpx):
 	print("NMEA file {:s} content converted to GPX in {:s}".format(nmea,gpx))
 	
 # opens serial port
-def open_serial():
-	ser = serial.Serial(argv[0])
+def open_serial(tty):
+	ser = serial.Serial(tty)
 	ser.open()
 	ser.flushInput()
 	ser.flushOutput()
@@ -341,21 +315,21 @@ def main(argv):
 		print(flag)
 		
 		if flag == "--start-logging":
-			print(write_cmd(open_serial(), PMKT_START_LOGGER))
+			print(write_cmd(open_serial(argv[0]), PMKT_START_LOGGER))
 		
 		elif flag == "--stop-logging":
 			ser = open_serial()
-			print(write_cmd(open_serial(), PMKT_STOP_LOGGER))
+			print(write_cmd(open_serial(argv[0]), PMKT_STOP_LOGGER))
 
 		elif flag == "--erase-flash":
 			c = input("Are you sure? [Y/N]")
 			if (c == "Y"):
 				ser = open_serial()
-				print(write_cmd(open_serial(), PMKT_FLASH))
+				print(write_cmd(open_serial(argv[0]), PMKT_FLASH))
 
 		elif flag == "--baud":
-			ser = open_serial()
 			b = input("Select baud [9600;57600]")
+			#print(write_cmd(open_serial(argv[0],*),b)
 
 		elif flag == "--rate":
 			r = input("Set GPS frames rate [100mHz, 200mHz, 1Hz, 2Hz, 5Hz, 10Hz]")
@@ -377,7 +351,7 @@ def main(argv):
 				cmd = PMTK_SET_NMEA_UPDATE_1HZ
 				print("Rate {:s} is not supported")
 				print("Switching back to 1 Hz default rate")
-			print(write_cmd(open_serial(), cmd))
+			print(write_cmd(open_serial(argv[0]), cmd))
 
 		elif flag == "--nmea-to-kml":
 			fp = input("Set input file path..\n")
@@ -389,9 +363,14 @@ def main(argv):
 		
 		elif flag == "--help":
 			print_help()
+			return 0
+
 		elif flag == "--h":
 			print_help()
+			return 0
+
 		elif flag == "help":
 			print_help()
+			return 0
 
 main(sys.argv)
