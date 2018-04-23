@@ -157,7 +157,7 @@ __interrupt void CCR0_ISR(void){
 #pragma vector = PORT1_VECTOR
 __interrupt void P1_ISR(void){
 #ifdef LOW_POWER
-//	_BIS_CR(LPM3_bits);
+	__bic_SR_register_on_exit(CPUOFF);
 	WDTCTL = WDTPW + WDTHOLD;
 #endif
 	tx_ptr = 0;
