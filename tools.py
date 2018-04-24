@@ -4,6 +4,10 @@ import sys
 import serial
 from datetime import date
 
+import numpy as np
+from mpl_toolkits.basemap import Basemap
+import matplotlib.pyplot as plt
+
 # PMTK module
 PMTK_SET_NMEA_UPDATE_100_MILLIHERTZ = "$PMTK220,10000*2F" 
 PMTK_SET_NMEA_UPDATE_200_MILLIHERTZ = "$PMTK220,5000*1B" 
@@ -20,13 +24,13 @@ PMTK_API_SET_FIX_CTL_5HZ = "$PMTK300,200,0,0,0,0*2F"
 PMTK_SET_BAUD_57600 = "$PMTK251,57600*2C"
 PMTK_SET_BAUD_9600 = "$PMTK251,9600*17"
 
-PMTK_SET_NMEA_OUTPUT_RMCONLY = "$PMTK314,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*29"
-PMTK_SET_NMEA_OUTPUT_RMCGGA = "$PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28"
-PMTK_SET_NMEA_OUTPUT_ALLDATA = "$PMTK314,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0*28"
-PMTK_SET_NMEA_OUTPUT_OFF = "$PMTK314,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28"
+PMTK_SET_NMEA_OUTPUT_RMCONLY = "$PMTK314,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*29\n"
+PMTK_SET_NMEA_OUTPUT_RMCGGA = "$PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28\n"
+PMTK_SET_NMEA_OUTPUT_ALLDATA = "$PMTK314,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0*28\n"
+PMTK_SET_NMEA_OUTPUT_OFF = "$PMTK314,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28\n"
 
-PMTK_STARTLOG = "$PMTK185,0*22"
-PMTK_STOPLOG = "$PMTK185,1*23"
+PMTK_STARTLOG = "$PMTK185,0*22\r\n"
+PMTK_STOPLOG = "$PMTK185,1*23\r\n"
 PMTK_STARTSTOPACK = "$PMTK001,185,3*3C"
 PMTK_QUERY_STATUS = "$PMTK183*38"
 PMTK_ERASE_FLASH = "$PMTK184,1*22"
@@ -60,10 +64,12 @@ def print_help():
 	string += "--baud\n\tSet GPS serial rate [9600,57600] b/s\n"
 	string += "--fix-rate\n\tSet LED fix blink rate\n"
 	string += "--nmea-rate\n\tSet GPS frames update rate [10Hz,5Hz,2Hz,1Hz,200mHz,100mHz]\n"
+	string += "--nmea-output\n\tSet nmea frames type to be produced [RMC,RMCGGA,ALL,OFF]\n"
 
-	string += "\nNMEA data:\n"
+	string += "\nData toolbox:\n"
 	string += "--nmea-to-kml\n\tConverts .nmea file to .kml file (google earth, ..)\n"
 	string += "--nmea-to-gpx\n\tConverts .nmea file to .gpx file (Garmin, etc..)\n"
+	string += "--view-coordinates\n\tDraws waypoints found in .nmea, .kml, .gpx data file onto map\n"
 
 	print(string)
 
@@ -325,15 +331,41 @@ def open_serial(tty):
 # draws coordinates contained in given file
 def view_coordinates(fp):
 	ext = fp.split(".")[-1]
-	if (ext == ".nmea"):
-		coords = nmea_parser(fp)
-	elif (ext == ".kml"):
-		coords = kml_parser(fp)
-	elif (ext == ".gpx"):
-		coords = gpx_parser(fp)
+	if (ext == "nmea"):
+		waypoints = nmea_parse_waypoints(fp)
+	elif (ext == "kml"):
+		waypoints = kml_parse_waypoints(fp)
+	elif (ext == "gpx"):
+		waypoints = gpx_parse_waypoints(fp)
 	else:
 		print("File format {:s} is not supported".format(ext))
 		return -1
+
+	# lon_0 is the central longitude of the project
+	# resolution = 'l' means use low resolution coaslines
+	# optional parameter 'satellite_height' may be used to
+	# specify height of orbit above earth (default 35,786 km).
+	# map creation
+	bm = Basemap(projection="geos", lon_0=waypoints[0][1]%360,resolution='l')#lat_0=waypoints[0][0], lon_0=waypoints[0][1])
+	bm.drawmapboundary(fill_color='aqua')
+	bm.drawcoastlines(linewidth=0.5)
+	bm.fillcontinents(color='coral',lake_color='aqua')
+	
+	bm.drawparallels(np.arange(-80,81,20))
+	bm.drawmeridians(np.arange(-180,180,20))
+	bm.drawmapboundary(fill_color='aqua')
+	
+	lat = []
+	lon = []
+	for waypoint in waypoints:
+		lat.append(waypoint[0])
+		lon.append(waypoint[1])
+
+	x, y = bm(lon, lat)
+	bm.plot(x,y,'bo')
+
+	plt.title('Worldwide Azimuthal Equidistant Projection (AEP)')
+	plt.show()
 
 def main(argv):
 	argv = argv[1:]
@@ -348,13 +380,11 @@ def main(argv):
 			print(write_cmd(open_serial(argv[0]), PMKT_START_LOGGER))
 		
 		elif flag == "--stop-logging":
-			ser = open_serial()
 			print(write_cmd(open_serial(argv[0]), PMKT_STOP_LOGGER))
 
 		elif flag == "--erase-flash":
 			c = input("Are you sure? [Y/N]")
 			if (c == "Y"):
-				ser = open_serial()
 				print(write_cmd(open_serial(argv[0]), PMKT_FLASH))
 
 		elif flag == "--baud":
@@ -383,6 +413,22 @@ def main(argv):
 				print("Switching back to 1 Hz default rate")
 			print(write_cmd(open_serial(argv[0]), cmd))
 
+		elif flag == "--nmea-output":
+			output = input("Set nmea output frames [RMC,RMC-GGA,ALL,OFF]..")
+			if not(output in ["RMC","RMC-GGA","ALL","OFF"]):
+				print("NMEA mode {:s} is not valid".format(output))
+			else:
+				if output == "RMC":
+					cmd = PMTK_SET_NMEA_OUTPUT_RMCONLY
+				elif output == "RMC-GGA":
+					cmd = PMTK_SET_NMEA_OUTPUT_RMCGGA
+				elif output == "OFF":
+					cmd = PMTK_SET_NMEA_OUTPUT_OFF
+				else:
+					cmd = PMTK_SET_NMEA_OUTPUT_ALL_DATA
+
+				print(write_cmd(open_serial(argv[0]),cmd)) 
+
 		elif flag == "--nmea-to-kml":
 			fp = input("Set input file path..\n")
 			nmea_to_kml(fp, fp.split(".")[0]+".kml")
@@ -390,6 +436,10 @@ def main(argv):
 		elif flag == "--nmea-to-gpx":
 			fp = input("Set input file path..\n")
 			nmea_to_gpx(fp, fp.split(".")[0]+".gpx")
+
+		elif flag == "--view-coordinates":
+			fp = input("Set input file path [.nmea]..\n")
+			view_coordinates(fp)
 		
 		elif flag == "--help":
 			print_help()

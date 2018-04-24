@@ -25,4 +25,4 @@ flash with
 # tools.py
 
 A python tool to control the PMKT module over
-serial port. Requires "pyserial".
+serial port. Requires "pyserial" & "basemap".
