@@ -178,9 +178,39 @@ class GPRMC:
 	def get_date(self):
 		return self.date
 
-# Converts .nmea file into .kml file
+# parses all waypoints (lat,lon,alt)
+# contained in .nmea file
+# results [[lat0,lon0,a0],[lat1,lon1,a1],..,[lat(n),lon(n),a(n)]]
+# were lat(i),lon(i) are expressed in decimal degrees
+def nmea_parse_waypoints(fp):
+	waypoints = []
+	fd=open(fp,"r")
+	for line in fd:
+		GPS = None
+		line = line.strip()
+		
+		if (line.startswith("$GPGGA")):
+			GPS = GPGGA(line)
+		elif (line.startswith("$GPRMC")):
+			GPS = GPRMC(line)
+		
+		if (GPS is not None):
+			latdeg = GPS_to_decimal_degrees(GPS.get_lat()[0])
+			if (GPS.get_lat()[1] == "S"):
+				latdeg *= (-1)
+		
+			londeg = GPS_to_decimal_degrees(GPS.get_lat()[0], islong=True)
+			if (GPS.get_long()[1] == "W"):
+				londeg *= (-1)
+
+			waypoint = [latdeg,londeg,GPS.get_alt()]
+			waypoints.append(waypoint)
+
+	fd.close()
+	return waypoints
+
+# Converts .nmea file to .kml file
 def nmea_to_kml(nmea, kml):
-	nmeafd = open(nmea, "r")
 	kmlfd = open(kml, "w")
 
 	# initialize kml file
@@ -205,50 +235,24 @@ def nmea_to_kml(nmea, kml):
 	kmlfd.write('\t\t<gx:Track>\n')
 	kmlfd.write('\t\t\t<altitudeMode>relativeToGround</altitudeMode>\n')
 
-	for line in nmeafd:
-		GPS = None
-		line = line.strip() # cleanup
-		if not(line):
-			continue
+	waypoints = nmea_parse_waypoints(nmea)
 
-		if (line.startswith("$GPGGA")):
-			GPS = GPGGA(line)
-		elif (line.startswith("$GPRMC")):
-			GPS = GPRMC(line)
-		else:
-			continue
+	for waypoint in waypoints:
+		lat = waypoint[0]
+		lon = waypoint[1]
+		alt = waypoint[2]
 
-		if (GPS is not None):
-			if (GPS.get_lat() == None):
-				continue
+		"""
+		# Handle timestamps
+		if (GPS._type() == "GPRMC"):
+		utc = GPS.get_utc()
+		h = utc.split(".")[0][0:1]
+		m = utc.split(".")[0][2:3]
+		s = utc.split(".")[0][4:5]
+		kmlfd.write('\t\t\t<when>20{:s}-{:s}-{:s}T{:s}:{:s}:{:s}Z</when>\n'.format(year,month,day,h,m,s))
+		"""
 
-			if (GPS._type() == "GPRMC"):
-				d = GPS.get_date()
-				day = d[0:1]
-				month = d[2:3]
-				year = d[4:5]
-			else:
-				#d = date.today()
-				year = "" 
-				month = "" 
-				day = "" 
-
-			utc = GPS.get_utc()
-			h = utc.split(".")[0][0:1]
-			m = utc.split(".")[0][2:3]
-			s = utc.split(".")[0][4:5]
-
-			kmlfd.write('\t\t\t<when>20{:s}-{:s}-{:s}T{:s}:{:s}:{:s}Z</when>\n'.format(year,month,day,h,m,s))
-
-			LDec = GPS_to_decimal_degrees(GPS.get_lat()[0])
-			if (GPS.get_lat()[0] == "S"):
-				LDec *= (-1)
-
-			lDec = GPS_to_decimal_degrees(GPS.get_long()[0], islong=True)
-			if (GPS.get_long()[0] == "W"):
-				lDec *= (-1)
-
-			kmlfd.write('\t\t\t<gx:coord>{:f} {:f} {:f}</gx:coord>\n'.format(lDec, LDec, float(GPS.get_alt())))
+		kmlfd.write('\t\t\t<gx:coord>{:f} {:f} {:f}</gx:coord>\n'.format(lat, lon, float(alt)))
 
 	kmlfd.write('\t\t</gx:Track>\n')
 	
@@ -256,15 +260,12 @@ def nmea_to_kml(nmea, kml):
 	kmlfd.write('\t</Placemark>\n')
 	kmlfd.write('\t</Folder>\n')
 	kmlfd.write('</kml>\n')
-
-	nmeafd.close()
 	kmlfd.close()
 	print("NMEA file {:s} content converted to KML in {:s}".format(nmea,kml))
 
+# converts .nmea file to .gpx
 def nmea_to_gpx(nmea, gpx):
-	nmeafd = open(nmea,"r")
 	gpxfd = open(gpx,"w")
-
 	gpxfd.write('<?xml version="1.0" encoding="UTF-8"?>\n')
 	gpxfd.write('<gpx version="1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\n')
 	gpxfd.write(' xmlns="http://www.topografix.com/GPX/1/0"\n')
@@ -277,53 +278,30 @@ def nmea_to_gpx(nmea, gpx):
 	gpxfd.write('\t\t<number>1</number>\n')
 	gpxfd.write('\t\t<trkseg>\n')
 
-	for line in nmeafd:
+	waypoints = nmea_parse_waypoints(nmea)
 
-		GPS = None
-		line = line.strip() # cleanup
-		if not(line):
-			continue
-		
-		if (line.startswith("$GPGGA")):
-			GPS = GPGGA(line)
-		elif (line.startswith("$GPRMC")):
-			GPS = GPRMC(line) 
-		else:
-			continue
-
-		if (GPS is not None):
-			LDec = GPS_to_decimal_degrees(GPS.get_lat()[0])
-			if (GPS.get_lat()[1] == "S"):
-				LDeg *= (-1)
+	for waypoint in waypoints:
+		lat = waypoint[0]
+		lon = waypoint[1]
+		alt = waypoint[2]
+		gpxfd.write('\t\t\t<trkpt lat="{:f}" lon="{:f}">\n'.format(lat,lon))
+		gpxfd.write('\t\t\t\t<ele>{:s}</ele>\n'.format(alt))
+		"""
+		#TODO handle timestamps
+		utc = GPS.get_utc()
+		h = utc.split(".")[0][0:1]
+		m = utc.split(".")[0][2:3]
+		s = utc.split(".")[0][4:5]
 			
-			lDec = GPS_to_decimal_degrees(GPS.get_long()[0], islong=True)
-			if (GPS.get_long()[1] == "W"):
-				lDec *= (-1)
-
-			gpxfd.write('\t\t\t<trkpt lat="{:f}" lon="{:f}">\n'.format(LDec, lDec))
-			gpxfd.write('\t\t\t\t<ele>{:s}</ele>\n'.format(GPS.get_alt()))
-
-			if (GPS._type() == "GPRMC"):
-				date = GPS.get_date()
-				day = date[0:1]
-				month = date[2:3]
-				year = date[4:5]
-
-				utc = GPS.get_utc()
-				h = utc.split(".")[0][0:1]
-				m = utc.split(".")[0][2:3]
-				s = utc.split(".")[0][4:5]
-
-				gpxfd.write('\t\t\t\t<time>20{:s}-{:s}-16T{:s}:{:s}:{:s}Z</time>\n'
-					.format(year,month,day,h,m,s)
-				)
-
-			gpxfd.write('\t\t\t</trkpt>\n')
+		gpxfd.write('\t\t\t\t<time>20{:s}-{:s}-16T{:s}:{:s}:{:s}Z</time>\n'
+			.format(year,month,day,h,m,s)
+		)
+		"""
+		gpxfd.write('\t\t\t</trkpt>\n')
 			
 	gpxfd.write('\t\t</trkseg>\n')
 	gpxfd.write('\t</trk>\n')
 	gpxfd.write('</gpx>')
-	nmeafd.close()
 	gpxfd.close()
 	print("NMEA file {:s} content converted to GPX in {:s}".format(nmea,gpx))
 	
@@ -343,6 +321,19 @@ def open_serial(tty):
 	ser.dsrdtr = False
 	ser.writeTimeout = 2
 	return ser
+
+# draws coordinates contained in given file
+def view_coordinates(fp):
+	ext = fp.split(".")[-1]
+	if (ext == ".nmea"):
+		coords = nmea_parser(fp)
+	elif (ext == ".kml"):
+		coords = kml_parser(fp)
+	elif (ext == ".gpx"):
+		coords = gpx_parser(fp)
+	else:
+		print("File format {:s} is not supported".format(ext))
+		return -1
 
 def main(argv):
 	argv = argv[1:]
