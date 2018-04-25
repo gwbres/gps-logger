@@ -206,7 +206,13 @@ def nmea_parse_waypoints(fp):
 			if (GPS.get_long()[1] == "W"):
 				londeg *= (-1)
 
-			waypoint = [latdeg,londeg]
+			utc = GPS.get_utc()
+			h = utc[0:2]
+			m = utc[2:4]
+			s = utc[4:]
+			text = "{:d}:{:d}:{:f}".format(int(h),int(m),float(s)) # brought up by geoplotlib.labels()
+
+			waypoint = [latdeg,londeg,GPS.get_alt(),text]
 			waypoints.append(waypoint)
 
 	fd.close()
@@ -229,7 +235,7 @@ def to_csv(fp, titles, data):
 	for j in range(0, len(data)):	
 		line = ""
 		for i in range(0, len(data[j])):
-			line += "{:f},".format(data[j][i]) 
+			line += "{:s},".format(str(data[j][i]) )
 		line += "\n"
 		fd.write(line)
 	fd.close()
@@ -351,10 +357,10 @@ def view_coordinates(fp):
 
 	# use temporary .csv file 
 	# to make it compliant with geoplot lib.
-	to_csv("/tmp/tmp.csv", ["lat","lon"], waypoints)
+	to_csv("/tmp/tmp.csv", ["lat","lon","alt","label"], waypoints)
 	data = read_csv("/tmp/tmp.csv")
 	geoplotlib.dot(data)
-	geoplotlib.labels(data, "name", color=[0,0,255,255],)
+	geoplotlib.labels(data, "label", color=[0,0,255,255], font_size=10, anchor_x='center')
 	geoplotlib.show()
 
 def main(argv):
