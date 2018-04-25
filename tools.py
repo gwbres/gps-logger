@@ -359,7 +359,7 @@ def view_coordinates(fp):
 	# to make it compliant with geoplot lib.
 	to_csv("/tmp/tmp.csv", ["lat","lon","alt","label"], waypoints)
 	data = read_csv("/tmp/tmp.csv")
-	geoplotlib.dot(data)
+	geoplotlib.dot(data, point_size=4)
 	geoplotlib.labels(data, "label", color=[0,0,255,255], font_size=10, anchor_x='center')
 	geoplotlib.show()
 
