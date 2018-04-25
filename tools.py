@@ -2,6 +2,7 @@
 
 import sys
 import serial
+import time
 from datetime import date
 
 import geoplotlib
@@ -25,11 +26,11 @@ PMTK_SET_BAUD_9600 = "$PMTK251,9600*17"
 
 PMTK_SET_NMEA_OUTPUT_RMCONLY = "$PMTK314,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*29\n"
 PMTK_SET_NMEA_OUTPUT_RMCGGA = "$PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28\n"
-PMTK_SET_NMEA_OUTPUT_ALLDATA = "$PMTK314,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0*28\n"
+PMTK_SET_NMEA_OUTPUT_ALL_DATA = "$PMTK314,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0*28\n"
 PMTK_SET_NMEA_OUTPUT_OFF = "$PMTK314,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28\n"
 
-PMTK_STARTLOG = "$PMTK185,0*22\r\n"
-PMTK_STOPLOG = "$PMTK185,1*23\r\n"
+PMTK_STARTLOG = "$PMTK185,0*22\r"
+PMTK_STOPLOG = "$PMTK185,1*23\r"
 PMTK_STARTSTOPACK = "$PMTK001,185,3*3C"
 PMTK_QUERY_STATUS = "$PMTK183*38"
 PMTK_ERASE_FLASH = "$PMTK184,1*22"
@@ -47,9 +48,9 @@ PGCMD_ANTENNA = "$PGCMD,33,1*6C"
 PGCMD_NOANTENNA = "$PGCMD,33,0*6D" 
 
 def write_cmd(tty, cmd):
-	tty.write(cmd+"\n")
-	sleep(0.1)
-	return tty.readline()
+	tty.write(bytes(cmd+"\n",encoding="utf-8"))
+	time.sleep(1)
+	return tty.readline().decode("utf-8")
 
 def print_help():
 	string = " █▀▀█ ▒█▀▀█ ▒█▀▀▀█ 　 ▀▀█▀▀ ▒█▀▀▀█ ▒█▀▀▀█ ▒█░░░ ▒█▀▀▀█\n▒█░▄▄ ▒█▄▄█ ░▀▀▀▄▄ 　 ░▒█░░ ▒█░░▒█ ▒█░░▒█ ▒█░░░ ░▀▀▀▄▄\n▒█▄▄█ ▒█░░░ ▒█▄▄▄█ 　 ░▒█░░ ▒█▄▄▄█ ▒█▄▄▄█ ▒█▄▄█ ▒█▄▄▄█\n"
@@ -326,9 +327,9 @@ def nmea_to_gpx(nmea, gpx):
 	print("NMEA file {:s} content converted to GPX in {:s}".format(nmea,gpx))
 	
 # opens serial port
-def open_serial(tty):
+def open_serial(tty, baudrate):
 	ser = serial.Serial(tty)
-	ser.open()
+	ser.baudrate = baudrate
 	ser.flushInput()
 	ser.flushOutput()
 	# setup
@@ -373,21 +374,27 @@ def main(argv):
 	for flag in argv:
 		
 		if flag == "--start-logging":
-			print(write_cmd(open_serial(argv[0]), PMKT_START_LOGGER))
+			ser = open_serial(argv[0],9600)
+			print(write_cmd(ser, PMTK_STARTLOG))
+			ser.close()
 		
 		elif flag == "--stop-logging":
-			print(write_cmd(open_serial(argv[0]), PMKT_STOP_LOGGER))
+			ser = open_serial(argv[0],9600)
+			print(write_cmd(ser, PMTK_STOPLOG))
+			ser.close()
 
 		elif flag == "--erase-flash":
 			c = input("Are you sure? [Y/N]")
 			if (c == "Y"):
-				print(write_cmd(open_serial(argv[0]), PMKT_FLASH))
+				ser = open_serial(argv[0],9600)
+				print(write_cmd(ser, PMTK_ERASE_FLASH))
+				ser.close()
 
 		elif flag == "--baud":
 			b = input("Select baud [9600;57600]")
 			#print(write_cmd(open_serial(argv[0],*),b)
 
-		elif flag == "--rate":
+		elif flag == "--nmea-rate":
 			r = input("Set GPS frames rate [100mHz, 200mHz, 1Hz, 2Hz, 5Hz, 10Hz]")
 			r.lower()
 
@@ -407,7 +414,10 @@ def main(argv):
 				cmd = PMTK_SET_NMEA_UPDATE_1HZ
 				print("Rate {:s} is not supported")
 				print("Switching back to 1 Hz default rate")
-			print(write_cmd(open_serial(argv[0]), cmd))
+			
+			ser = open_serial(argv[0],9600)
+			print(write_cmd(ser,cmd))
+			ser.close()
 
 		elif flag == "--nmea-output":
 			output = input("Set nmea output frames [RMC,RMC-GGA,ALL,OFF]..")
@@ -423,7 +433,9 @@ def main(argv):
 				else:
 					cmd = PMTK_SET_NMEA_OUTPUT_ALL_DATA
 
-				print(write_cmd(open_serial(argv[0]),cmd)) 
+				ser = open_serial("/dev/ttyUSB0",9600)
+				print(write_cmd(ser,cmd))
+				ser.close()
 
 		elif flag == "--nmea-to-kml":
 			fp = input("Set input file path..\n")
