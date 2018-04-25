@@ -4,9 +4,8 @@ import sys
 import serial
 from datetime import date
 
-import numpy as np
-from mpl_toolkits.basemap import Basemap
-import matplotlib.pyplot as plt
+import geoplotlib
+from geoplotlib.utils import read_csv
 
 # PMTK module
 PMTK_SET_NMEA_UPDATE_100_MILLIHERTZ = "$PMTK220,10000*2F" 
@@ -73,29 +72,27 @@ def print_help():
 
 	print(string)
 
-# Converts parsed coordinates to degrees/min/secs
-def coord_to_deg_min(coord, islong=False):
+# Converts parsed coordinates 
+# lat: ddmm.ssss
+# lon: dddmm.ssss
+# to D° M' S" 
+def coord_to_DMS(coord, islong=False):
 	#2503.6319 i.e ddmm.mmmm: 25°03.6319' = 25°03'37,914"
 	if (islong):
-		deg = coord.split(".")[0][0:3]
-		min = coord.split(".")[0][3:5]
-		secs = coord.split(".")[1]
+		D = int(coord.split(".")[0][0:3])
+		M = int(coord.split(".")[0][3:5])
+		S = float("0."+coord.split(".")[1])*60
 	else:
-		deg = coord.split(".")[0][0:2]
-		min = coord.split(".")[0][2:4]
-		secs = coord.split(".")[1]
-	return [deg,min,secs]
+		D = int(coord.split(".")[0][0:2])
+		M = int(coord.split(".")[0][2:4])
+		S = float("0."+coord.split(".")[1])*60
+	return [D, M, S]
 
 # converts GPS coordinates to decimal degrees
 # coord: ddmm.ssss
-def GPS_to_decimal_degrees(coord, islong=False):
-	[deg,min,secs] = coord_to_deg_min(coord, islong=islong)
-	string = "{:s}{:s}.{:s}".format(deg,min,secs)
-	D = int(deg)
-	M = int(min)
-	S = 60*float("0.{:s}".format(secs))
-	DDec = D+M/60+S/3600
-	return DDec
+def coord_to_decimal_degrees(coord, islong=False):
+	[D, M, S] = coord_to_DMS(coord, islong=islong)
+	return D+M/60+S/3600
 
 def knots_to_kmph(knots):
 	mph = knots*1.15078
@@ -201,19 +198,41 @@ def nmea_parse_waypoints(fp):
 			GPS = GPRMC(line)
 		
 		if (GPS is not None):
-			latdeg = GPS_to_decimal_degrees(GPS.get_lat()[0])
+			latdeg = coord_to_decimal_degrees(GPS.get_lat()[0])
 			if (GPS.get_lat()[1] == "S"):
 				latdeg *= (-1)
 		
-			londeg = GPS_to_decimal_degrees(GPS.get_lat()[0], islong=True)
+			londeg = coord_to_decimal_degrees(GPS.get_long()[0], islong=True)
 			if (GPS.get_long()[1] == "W"):
 				londeg *= (-1)
 
-			waypoint = [latdeg,londeg,GPS.get_alt()]
+			waypoint = [latdeg,londeg]
 			waypoints.append(waypoint)
 
 	fd.close()
 	return waypoints
+
+# puts data to given file in csv format
+# line0: titles[0],titles[1],..,titles[n-1],
+# line1: data[0][0],data[0][1],..,data[0][n-1],
+#  .
+#  .
+# line[l-1]: data[l-1][0],...,data[l-1][n-1]
+def to_csv(fp, titles, data):
+	fd=open(fp,"w")
+	line = ""
+	for title in titles:
+		line += "{:s},".format(title)
+	line += "\n"
+	fd.write(line)
+
+	for j in range(0, len(data)):	
+		line = ""
+		for i in range(0, len(data[j])):
+			line += "{:f},".format(data[j][i]) 
+		line += "\n"
+		fd.write(line)
+	fd.close()
 
 # Converts .nmea file to .kml file
 def nmea_to_kml(nmea, kml):
@@ -238,29 +257,18 @@ def nmea_to_kml(nmea, kml):
 	kmlfd.write('\t\t</Style>\n')
 
 	# track
-	kmlfd.write('\t\t<gx:Track>\n')
+	kmlfd.write('\t\t<LineString>\n')
 	kmlfd.write('\t\t\t<altitudeMode>relativeToGround</altitudeMode>\n')
+	kmlfd.write('\t\t\t<coordinates>\n')
 
 	waypoints = nmea_parse_waypoints(nmea)
-
 	for waypoint in waypoints:
 		lat = waypoint[0]
 		lon = waypoint[1]
-		alt = waypoint[2]
+		kmlfd.write('\t\t\t\t{:f},{:f},{:f}\n'.format(lon, lat, 0.0))
 
-		"""
-		# Handle timestamps
-		if (GPS._type() == "GPRMC"):
-		utc = GPS.get_utc()
-		h = utc.split(".")[0][0:1]
-		m = utc.split(".")[0][2:3]
-		s = utc.split(".")[0][4:5]
-		kmlfd.write('\t\t\t<when>20{:s}-{:s}-{:s}T{:s}:{:s}:{:s}Z</when>\n'.format(year,month,day,h,m,s))
-		"""
-
-		kmlfd.write('\t\t\t<gx:coord>{:f} {:f} {:f}</gx:coord>\n'.format(lat, lon, float(alt)))
-
-	kmlfd.write('\t\t</gx:Track>\n')
+	kmlfd.write('\t\t\t</coordinates>\n')
+	kmlfd.write('\t\t</LineString>\n')
 	
 	# finalize kml file 
 	kmlfd.write('\t</Placemark>\n')
@@ -289,9 +297,9 @@ def nmea_to_gpx(nmea, gpx):
 	for waypoint in waypoints:
 		lat = waypoint[0]
 		lon = waypoint[1]
-		alt = waypoint[2]
 		gpxfd.write('\t\t\t<trkpt lat="{:f}" lon="{:f}">\n'.format(lat,lon))
-		gpxfd.write('\t\t\t\t<ele>{:s}</ele>\n'.format(alt))
+		gpxfd.write('\t\t\t\t<ele>{:s}</ele>\n'.format("0"))
+		
 		"""
 		#TODO handle timestamps
 		utc = GPS.get_utc()
@@ -341,31 +349,13 @@ def view_coordinates(fp):
 		print("File format {:s} is not supported".format(ext))
 		return -1
 
-	# lon_0 is the central longitude of the project
-	# resolution = 'l' means use low resolution coaslines
-	# optional parameter 'satellite_height' may be used to
-	# specify height of orbit above earth (default 35,786 km).
-	# map creation
-	bm = Basemap(projection="geos", lon_0=waypoints[0][1]%360,resolution='l')#lat_0=waypoints[0][0], lon_0=waypoints[0][1])
-	bm.drawmapboundary(fill_color='aqua')
-	bm.drawcoastlines(linewidth=0.5)
-	bm.fillcontinents(color='coral',lake_color='aqua')
-	
-	bm.drawparallels(np.arange(-80,81,20))
-	bm.drawmeridians(np.arange(-180,180,20))
-	bm.drawmapboundary(fill_color='aqua')
-	
-	lat = []
-	lon = []
-	for waypoint in waypoints:
-		lat.append(waypoint[0])
-		lon.append(waypoint[1])
-
-	x, y = bm(lon, lat)
-	bm.plot(x,y,'bo')
-
-	plt.title('Worldwide Azimuthal Equidistant Projection (AEP)')
-	plt.show()
+	# use temporary .csv file 
+	# to make it compliant with geoplot lib.
+	to_csv("/tmp/tmp.csv", ["lat","lon"], waypoints)
+	data = read_csv("/tmp/tmp.csv")
+	geoplotlib.dot(data)
+	geoplotlib.labels(data, "name", color=[0,0,255,255],)
+	geoplotlib.show()
 
 def main(argv):
 	argv = argv[1:]
