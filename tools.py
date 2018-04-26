@@ -191,36 +191,36 @@ def nmea_parse_waypoints(fp):
 	waypoints = []
 	fd=open(fp,"r")
 	for line in fd:
-		GPS = None
 		line = line.strip()
 		
 		if (line.startswith("$GPGGA")):
 			GPS = GPGGA(line)
 		elif (line.startswith("$GPRMC")):
 			GPS = GPRMC(line)
+		else:
+			continue
 		
-		if (GPS is not None):
-			latdeg = coord_to_decimal_degrees(GPS.get_lat()[0])
-			if (GPS.get_lat()[1] == "S"):
-				latdeg *= (-1)
+		latdeg = coord_to_decimal_degrees(GPS.get_lat()[0])
+		if (GPS.get_lat()[1] == "S"):
+			latdeg *= (-1)
 		
-			londeg = coord_to_decimal_degrees(GPS.get_long()[0], islong=True)
-			if (GPS.get_long()[1] == "W"):
-				londeg *= (-1)
+		londeg = coord_to_decimal_degrees(GPS.get_long()[0], islong=True)
+		if (GPS.get_long()[1] == "W"):
+			londeg *= (-1)
 
-			utc = GPS.get_utc()
-			h = utc[0:2]
-			m = utc[2:4]
-			s = utc[4:]
-			text = "{:d}:{:d}:{:f}".format(int(h),int(m),float(s)) # brought up by geoplotlib.labels()
+		utc = GPS.get_utc()
+		h = utc[0:2]
+		m = utc[2:4]
+		s = utc[4:]
+		text = "{:d}:{:d}:{:f}".format(int(h),int(m),float(s)) # brought up by geoplotlib.labels()
 
-			waypoint = [latdeg,londeg,GPS.get_alt(),text]
-			waypoints.append(waypoint)
+		waypoint = [latdeg,londeg,GPS.get_alt(),text]
+		waypoints.append(waypoint)
 
 	fd.close()
 	return waypoints
 
-# puts data to given file in csv format
+# puts data into given file in csv format
 # line0: titles[0],titles[1],..,titles[n-1],
 # line1: data[0][0],data[0][1],..,data[0][n-1],
 #  .
@@ -372,7 +372,7 @@ def main(argv):
 		print_help()
 		return -1
 
-	for flag in argv[1:]:
+	for flag in argv:
 		if flag == "--status":
 			ser = open_serial(argv[0],9600)
 			answer = write_cmd(ser, PMTK_QUERY_STATUS)
