@@ -80,7 +80,6 @@ def print_help():
 # lon: dddmm.ssss
 # to D° M' S" 
 def coord_to_DMS(coord, islong=False):
-	#2503.6319 i.e ddmm.mmmm: 25°03.6319' = 25°03'37,914"
 	if (islong):
 		D = int(coord.split(".")[0][0:3])
 		M = int(coord.split(".")[0][3:5])
@@ -373,7 +372,7 @@ def main(argv):
 		print_help()
 		return -1
 
-	for flag in argv:
+	for flag in argv[1:]:
 		if flag == "--status":
 			ser = open_serial(argv[0],9600)
 			answer = write_cmd(ser, PMTK_QUERY_STATUS)
@@ -513,5 +512,8 @@ def main(argv):
 		elif flag == "help":
 			print_help()
 			return 0
+
+		else:
+			print("Unknown flag {:s}".format(flag))
 
 main(sys.argv)
