@@ -43,8 +43,8 @@ The script can convert .nmea files to .kml & .gpx
 files (kml: Google earth.., gpx: OpenStreetMap, GPSVisualizer..).
 
 ```bash
-python3 tools.py /dev/ttyUSB0 --nmea-to-kml
-python3 tools.py /dev/ttyUSB0 --nmea-to-gpx
+python3 tools.py --nmea-to-kml
+python3 tools.py --nmea-to-gpx
 ```
 
 The script allows to view data waypoints contained
@@ -52,7 +52,7 @@ in a .nmea, a .kml or a .gpx file over a map, using
 the "geoplotlib" package.
 
 ```bash
-python3 tools.py /dev/ttyUSB0 --view-coordinates
+python3 tools.py --view-coordinates
 ```
 
 Required python packages to run the script:
