@@ -27,15 +27,33 @@ flash with
 A python tool to control the PMKT module over
 serial port and manipulate .nmea data.
 
+```bash
+python3 tools.py --help
+```
+
 The script can send known commands to the module
 over serial port.
+
+```bash
+python3 tools.py /dev/ttyUSB0 --status
+python3 tools.py /dev/ttyUSB0 --start-logging
+```
 
 The script can convert .nmea files to .kml & .gpx
 files (kml: google earth).
 
+```bash
+python3 tools.py /dev/ttyUSB0 --nmea-to-kml
+python3 tools.py /dev/ttyUSB0 --nmea-to-gpx
+```
+
 The script allows to view data waypoints contained
 in a .nmea, a .kml or a .gpx file over a map, using
 the "geoplotlib" package.
+
+```bash
+python3 tools.py /dev/ttyUSB0 --view-coordinates
+```
 
 Required python packages to run the script:
 
