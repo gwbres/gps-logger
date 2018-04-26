@@ -9,43 +9,43 @@ import geoplotlib
 from geoplotlib.utils import read_csv
 
 # PMTK module
-PMTK_SET_NMEA_UPDATE_100_MILLIHERTZ = "$PMTK220,10000*2F" 
-PMTK_SET_NMEA_UPDATE_200_MILLIHERTZ = "$PMTK220,5000*1B" 
-PMTK_SET_NMEA_UPDATE_1HZ = "$PMTK220,1000*1F"
-PMTK_SET_NMEA_UPDATE_2HZ = "$PMTK220,500*2B"
-PMTK_SET_NMEA_UPDATE_5HZ = "$PMTK220,200*2C"
-PMTK_SET_NMEA_UPDATE_10HZ = "$PMTK220,100*2F"
+PMTK_SET_NMEA_UPDATE_100_MILLIHERTZ = "$PMTK220,10000*2F\r\n"
+PMTK_SET_NMEA_UPDATE_200_MILLIHERTZ = "$PMTK220,5000*1B\r\n"
+PMTK_SET_NMEA_UPDATE_1HZ = "$PMTK220,1000*1F\r\n"
+PMTK_SET_NMEA_UPDATE_2HZ = "$PMTK220,500*2B\r\n"
+PMTK_SET_NMEA_UPDATE_5HZ = "$PMTK220,200*2C\r\n"
+PMTK_SET_NMEA_UPDATE_10HZ = "$PMTK220,100*2F\r\n"
 
-PMTK_API_SET_FIX_CTL_100_MILLIHERTZ = "$PMTK300,10000,0,0,0,0*2C" 
-PMTK_API_SET_FIX_CTL_200_MILLIHERTZ = "$PMTK300,5000,0,0,0,0*18" 
-PMTK_API_SET_FIX_CTL_1HZ = "$PMTK300,1000,0,0,0,0*1C"
-PMTK_API_SET_FIX_CTL_5HZ = "$PMTK300,200,0,0,0,0*2F"
+PMTK_API_SET_FIX_CTL_100_MILLIHERTZ = "$PMTK300,10000,0,0,0,0*2C\r\n" 
+PMTK_API_SET_FIX_CTL_200_MILLIHERTZ = "$PMTK300,5000,0,0,0,0*18\r\n" 
+PMTK_API_SET_FIX_CTL_1HZ = "$PMTK300,1000,0,0,0,0*1C\r\n"
+PMTK_API_SET_FIX_CTL_5HZ = "$PMTK300,200,0,0,0,0*2F\r\n"
 
-PMTK_SET_BAUD_57600 = "$PMTK251,57600*2C"
-PMTK_SET_BAUD_9600 = "$PMTK251,9600*17"
+PMTK_SET_BAUD_57600 = "$PMTK251,57600*2C\r\n"
+PMTK_SET_BAUD_9600 = "$PMTK251,9600*17\r\n"
 
-PMTK_SET_NMEA_OUTPUT_RMCONLY = "$PMTK314,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*29\n"
-PMTK_SET_NMEA_OUTPUT_RMCGGA = "$PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28\n"
-PMTK_SET_NMEA_OUTPUT_ALL_DATA = "$PMTK314,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0*28\n"
-PMTK_SET_NMEA_OUTPUT_OFF = "$PMTK314,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28\n"
+PMTK_SET_NMEA_OUTPUT_RMC_ONLY = "$PMTK314,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*29\r\n"
+PMTK_SET_NMEA_OUTPUT_RMC_GGA = "$PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28\r\n"
+PMTK_SET_NMEA_OUTPUT_ALL_DATA = "$PMTK314,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0*28\r\n"
+PMTK_SET_NMEA_OUTPUT_OFF = "$PMTK314,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28\r\n"
 
-PMTK_STARTLOG = "$PMTK185,0*22\r"
-PMTK_STOPLOG = "$PMTK185,1*23\r"
-PMTK_STARTSTOPACK = "$PMTK001,185,3*3C"
-PMTK_QUERY_STATUS = "$PMTK183*38"
-PMTK_ERASE_FLASH = "$PMTK184,1*22"
+PMTK_START_LOG = "$PMTK185,0*22\r\n"
+PMTK_STOP_LOG = "$PMTK185,1*23\r\n"
+PMTK_QUERY_STATUS = "$PMTK183*38\r\n"
+PMTK_ERASE_FLASH = "$PMTK184,1*22\r\n"
 
-PMTK_ENABLE_SBAS = "$PMTK313,1*2E"
-PMTK_ENABLE_WAAS = "$PMTK301,2*2E"
+PMTK_ENABLE_SBAS = "$PMTK313,1*2E\r\n"
+PMTK_ENABLE_WAAS = "$PMTK301,2*2E\r\n"
 
-PMTK_STANDBY = "$PMTK161,0*28"
-PMTK_STANDBY_SUCCESS = "$PMTK001,161,3*36"
-PMTK_AWAKE = "$PMTK010,002*2D"
+PMTK_STANDBY = "$PMTK161,0*28\r\n"
+PMTK_STANDBY_SUCCESS = "$PMTK001,161,3*36\r\n"
+PMTK_AWAKE = "$PMTK010,002*2D\r\n"
 
-PMTK_Q_RELEASE = "$PMTK605*31"
+PMTK_Q_RELEASE = "$PMTK605*31\r\n"
+PMTK_DUMP_LOCUS_DATA = "$PMTK622,0*28\r\n"
 
-PGCMD_ANTENNA = "$PGCMD,33,1*6C" 
-PGCMD_NOANTENNA = "$PGCMD,33,0*6D" 
+PGCMD_ANTENNA = "$PGCMD,33,1*6C\r\n"
+PGCMD_NOANTENNA = "$PGCMD,33,0*6D\r\n"
 
 def write_cmd(tty, cmd):
 	tty.write(bytes(cmd+"\n",encoding="utf-8"))
@@ -56,9 +56,11 @@ def print_help():
 	string = " █▀▀█ ▒█▀▀█ ▒█▀▀▀█ 　 ▀▀█▀▀ ▒█▀▀▀█ ▒█▀▀▀█ ▒█░░░ ▒█▀▀▀█\n▒█░▄▄ ▒█▄▄█ ░▀▀▀▄▄ 　 ░▒█░░ ▒█░░▒█ ▒█░░▒█ ▒█░░░ ░▀▀▀▄▄\n▒█▄▄█ ▒█░░░ ▒█▄▄▄█ 　 ░▒█░░ ▒█▄▄▄█ ▒█▄▄▄█ ▒█▄▄█ ▒█▄▄▄█\n"
 
 	string += "\nPMTK module:\n"
+	string += "--status\n\tQuery status\n"
 	string += "--start-logging\n\tGPS module starts recording frame\n"
 	string += "--stop-logging\n\tModule stops recording frames\n"
 	string += "--erase-flash\n\tErases frames stored into internal memory\n"
+	string += "--dump\n\tDump flash data\n"
 	
 	string += "\nPMTK module [advanced]\n"
 	string += "--baud\n\tSet GPS serial rate [9600,57600] b/s\n"
@@ -372,15 +374,57 @@ def main(argv):
 		return -1
 
 	for flag in argv:
-		
-		if flag == "--start-logging":
+		if flag == "--status":
 			ser = open_serial(argv[0],9600)
-			print(write_cmd(ser, PMTK_STARTLOG))
+			answer = write_cmd(ser, PMTK_QUERY_STATUS)
+			if answer.startswith("$PMTKLOG"):
+
+				string = "Status:\n"
+				string += "SN {:s}\n".format(answer.split(",")[1])
+			
+				log = int(answer.split(",")[2])
+				if (log):
+					string += "Overlapped logging mode\n" 
+				else:
+					string += "FullStop logging mode\n"
+
+				string += "Logging interval: {:s}\n".format(answer.split(",")[3])
+				string += "Logging distance: {:s}\n".format(answer.split(",")[4])
+				string += "Logging speed setting: {:s}\n".format(answer.split(",")[5])
+				string += "Logging: {:s}\n".format(answer.split(",")[6])
+				string += "Data record: {:s}\n".format(answer.split(",")[7])
+				string += "Flash usage: {:s}%\n".format(answer.split(",")[8].split("*")[0])
+				print(string)
+			else:
+				print("Error")
+				print(answer)
+			ser.close()
+		
+		elif flag == "--start-logging":
+			ser = open_serial(argv[0],9600)
+			answer = write_cmd(ser, PMTK_START_LOG).strip()
+			if (answer == "$PMTK001,185,3*3C"):
+				print("Logger has been started")
+			else:
+				print("Error: {:s}".format(answer))
 			ser.close()
 		
 		elif flag == "--stop-logging":
 			ser = open_serial(argv[0],9600)
-			print(write_cmd(ser, PMTK_STOPLOG))
+			print(write_cmd(ser, PMTK_STOP_LOG))
+			ser.close()
+
+		elif flag == "--dump":
+			ser = open_serial(argv[0],9600)
+			answer = write_cmd(ser, PMTK_SET_NMEA_OUTPUT_OFF).strip()
+			#if (answer == "$PMTK001,314,3*36"):
+			answer = write_cmd(ser, PMTK_DUMP_LOCUS_DATA)
+			for i in range(0, 20):
+				print(ser.readline())
+
+			#else:
+			#	print("failed to turn NMEA output off")
+
 			ser.close()
 
 		elif flag == "--erase-flash":
@@ -388,6 +432,7 @@ def main(argv):
 			if (c == "Y"):
 				ser = open_serial(argv[0],9600)
 				print(write_cmd(ser, PMTK_ERASE_FLASH))
+				#expecting: $PMTK001,184,3*3D<CR><LF>
 				ser.close()
 
 		elif flag == "--baud":
@@ -396,19 +441,18 @@ def main(argv):
 
 		elif flag == "--nmea-rate":
 			r = input("Set GPS frames rate [100mHz, 200mHz, 1Hz, 2Hz, 5Hz, 10Hz]")
-			r.lower()
 
-			if r == "100mhz":
+			if r == "100mHz":
 				cmd = PMTK_SET_NMEA_UPDATE_100_MILLIHERTZ
-			elif r == "200mhz":
+			elif r == "200mHz":
 				cmd = PMTK_SET_NMEA_UPDATE_200_MILLIHERTZ
-			elif r == "1hz":
+			elif r == "1Hz":
 				cmd = PMTK_SET_NMEA_UPDATE_1HZ
-			elif r == "2hz":
+			elif r == "2Hz":
 				cmd = PMTK_SET_NMEA_UPDATE_2HZ
-			elif r == "5hz":
+			elif r == "5Hz":
 				cmd = PMTK_SET_NMEA_UPDATE_5HZ
-			elif r == "10hz":
+			elif r == "10Hz":
 				cmd = PMTK_SET_NMEA_UPDATE_10HZ
 			else:
 				cmd = PMTK_SET_NMEA_UPDATE_1HZ
@@ -416,7 +460,12 @@ def main(argv):
 				print("Switching back to 1 Hz default rate")
 			
 			ser = open_serial(argv[0],9600)
-			print(write_cmd(ser,cmd))
+			answer = write_cmd(ser,cmd).strip()
+			if (answer == "$PMTK001,220,3*30"):
+				print("Success")
+			else:
+				print("Error: {:s}".format(answer))
+
 			ser.close()
 
 		elif flag == "--nmea-output":
@@ -425,16 +474,20 @@ def main(argv):
 				print("NMEA mode {:s} is not valid".format(output))
 			else:
 				if output == "RMC":
-					cmd = PMTK_SET_NMEA_OUTPUT_RMCONLY
+					cmd = PMTK_SET_NMEA_OUTPUT_RMC_ONLY
 				elif output == "RMC-GGA":
-					cmd = PMTK_SET_NMEA_OUTPUT_RMCGGA
+					cmd = PMTK_SET_NMEA_OUTPUT_RMC_GGA
 				elif output == "OFF":
 					cmd = PMTK_SET_NMEA_OUTPUT_OFF
 				else:
 					cmd = PMTK_SET_NMEA_OUTPUT_ALL_DATA
 
-				ser = open_serial("/dev/ttyUSB0",9600)
-				print(write_cmd(ser,cmd))
+				ser = open_serial(argv[0],9600)
+				answer = write_cmd(ser,cmd).strip()
+				if (answer == "$PMTK001,314,3*36"):
+					print("Success")
+				else:
+					print("Error: {:s}".format(answer))
 				ser.close()
 
 		elif flag == "--nmea-to-kml":
