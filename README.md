@@ -40,7 +40,7 @@ python3 tools.py /dev/ttyUSB0 --start-logging
 ```
 
 The script can convert .nmea files to .kml & .gpx
-files (kml: google earth).
+files (kml: Google earth.., gpx: OpenStreetMap, GPSVisualizer..).
 
 ```bash
 python3 tools.py /dev/ttyUSB0 --nmea-to-kml
