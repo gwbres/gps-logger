@@ -125,8 +125,8 @@ void welcome(void){
 
 void pmtk_module_tests(void){
 // baud:
-	GPS_set_baud(9600); // tx_buf, &bytes_to_send, &tx_ptr);
-	GPS_set_baud(57600); // tx_buf, &bytes_to_send, &tx_ptr);
+	GPS_set_baud(9600);
+	GPS_set_baud(57600);
 // flash:
 	GPS_start_logging();
 	GPS_stop_logging();
