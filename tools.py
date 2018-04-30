@@ -219,6 +219,58 @@ def nmea_parse_waypoints(fp):
 	fd.close()
 	return waypoints
 
+# converts string of bytes into byte array
+def toByteArray(str):
+	bytes = []
+	while (len(str) > 1):
+		byte = str[2:]
+		bytes.append(int(byte,16))
+		str = str[2::]
+	return bytes
+
+def parseInt(bytes):
+	n = ((0xFF & bytes[1]) << 8) | (0xFF & bytes[0])
+	return n
+
+def parseLong(bytes):
+	n = ((0xFF & bytes[3]) << 24) | ((0xFF & bytes[2]) << 16) | ((0xFF & bytes[1]) << 8) | (0xFF & bytes[0]) 
+	return n
+
+def parseFloat(bytes):
+	longValue = parseLong(bytes)
+	exponent = ((longValue >> 23) & 0xff) # float
+	exponent -= 127.0
+	exponent = pow(2,exponent)
+	mantissa = (longValue & 0x7fffff)
+	mantissa = 1.0 + (mantissa/8388607.0)
+	floatValue = mantissa * exponent
+	if ((longValue & 0x80000000) == 0x80000000):
+		floatValue = -floatValue
+	return floatValue 
+
+# parses all waypoints contained in locus flash memory
+def locus_parse_waypoints(fp):
+	waypoints = []
+	fd = open(fp, "r")
+	for line in fd:
+		data, checksum = line.split('*')
+		#TODO verify checkum
+		data = data[3:] # rm cmd/type/Line number
+		bytes = toByteArray("".join(data))
+
+		chunksize = 16 # basic logging
+		while (len(bytes) >= chunksize):
+			timestamp = bytes[:chunksize][0:4] 
+			date = datetime.fromtimestamp(timestamp)
+			fix = bytes[:chunksize][4]
+			lat = parseFloat(bytes[:chunksize][5:9])
+			lon = parseFloat(bytes[:chunksize][9:13])
+			alt = parseInt(bytes[:chunksize][13:15])
+			bytes = bytes[chunksize:]
+			waypoint = [lat, lon, alt, ""]
+			waypoints.append(waypoint)
+	fd.close()
+
 # puts data into given file in csv format
 # line0: titles[0],titles[1],..,titles[n-1],
 # line1: data[0][0],data[0][1],..,data[0][n-1],
@@ -241,8 +293,8 @@ def to_csv(fp, titles, data):
 		fd.write(line)
 	fd.close()
 
-# Converts .nmea file to .kml file
-def nmea_to_kml(nmea, kml):
+# Converts waypoints to .kml file
+def waypoints_to_kml(waypoints, kml):
 	kmlfd = open(kml, "w")
 
 	# initialize kml file
@@ -268,7 +320,6 @@ def nmea_to_kml(nmea, kml):
 	kmlfd.write('\t\t\t<altitudeMode>relativeToGround</altitudeMode>\n')
 	kmlfd.write('\t\t\t<coordinates>\n')
 
-	waypoints = nmea_parse_waypoints(nmea)
 	for waypoint in waypoints:
 		lat = waypoint[0]
 		lon = waypoint[1]
@@ -284,22 +335,20 @@ def nmea_to_kml(nmea, kml):
 	kmlfd.close()
 	print("NMEA file {:s} content converted to KML in {:s}".format(nmea,kml))
 
-# converts .nmea file to .gpx
-def nmea_to_gpx(nmea, gpx):
+# converts waypoints to .gpx file
+def waypoints_to_gpx(waypoints, gpx):
 	gpxfd = open(gpx,"w")
 	gpxfd.write('<?xml version="1.0" encoding="UTF-8"?>\n')
 	gpxfd.write('<gpx version="1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\n')
 	gpxfd.write(' xmlns="http://www.topografix.com/GPX/1/0"\n')
 	gpxfd.write(' xsi:schemaLocation="http://www.topografix.com/GPX/1/0 http://www.topografix.com/GPX/1/0/gpx.xsd">\n')
 
-	gpxfd.write('\t<name>{:s}</name>\n'.format(nmea))
-	gpxfd.write('\t<desc>Imported from {:s}</desc>\n'.format(nmea))
+	gpxfd.write('\t<name>{:s}</name>\n'.format('Test'))
+	gpxfd.write('\t<desc>{:s}</desc>\n'.format("Test"))
 	gpxfd.write('\t<trk>\n')
 	gpxfd.write('\t\t<name>Track</name>\n')
 	gpxfd.write('\t\t<number>1</number>\n')
 	gpxfd.write('\t\t<trkseg>\n')
-
-	waypoints = nmea_parse_waypoints(nmea)
 
 	for waypoint in waypoints:
 		lat = waypoint[0]
@@ -325,7 +374,7 @@ def nmea_to_gpx(nmea, gpx):
 	gpxfd.write('</gpx>')
 	gpxfd.close()
 	print("NMEA file {:s} content converted to GPX in {:s}".format(nmea,gpx))
-	
+
 # opens serial port
 def open_serial(tty, baudrate):
 	ser = serial.Serial(tty)
@@ -375,46 +424,46 @@ def main(argv):
 		if flag == "--status":
 			ser = open_serial(argv[0],9600)
 			answer = write_cmd(ser, PMTK_QUERY_STATUS)
-			if answer.startswith("$PMTKLOG"):
 
-				string = "Status:\n"
-				string += "SN {:s}\n".format(answer.split(",")[1])
+			print(answer)
+			string = "Status:\n"
+			string += "SN {:s}\n".format(answer.split(",")[1])
 			
-				logType = int(answer.split(",")[2])
-				string += "Log type: "
-				if (logType == 0):
-					string += "locus overlap\n"
-				else:
-					string += "locus fullstop\n"
-
-				logMode = int(answer.split(',')[3])
-				string += "locus mode:"
-				if (logMode & 0x1):
-					string += " AlwaysLocate"
-				if (logMode & 0x2):
-					string += " FixOnly"
-				if (logMode & 0x4):
-					string += " Normal"
-				if (logMode & 0x8):
-					string += " Interval"
-				if (logMode & 0x10)
-					string += " Distance"
-				if (logMode & 0x20)
-					string += " Speed"
-				string += "\n"
-
-				string += 'locus content: {:d}\n'.format(int(answer.split(',')[4]))
-				string += 'locus interval: {:d} [s]\n'.format(int(answer.split(',')[5]))
-				string += 'locus distance: {:d} [m]\n'.format(int(answer.split(',')[6]))
-				string += 'locus speed: {:d} [m/s]\n'.format(int(answer.split(',')[7]))
-				string += 'locus logging: {:d}\n'.format(not(bool(answer.split(',')[8])))
-				string += "Data records: {:s}\n".format(answer.split(',')[9])
-				string += "{:s}% flash used:\n".format(answer.split(",")[10].split("*")[0])
-				print(string)
-
+			logType = int(answer.split(",")[2])
+			string += "Log type: "
+			if (logType == 0):
+				string += "locus overlap\n"
 			else:
-				print("Error")
-				print(answer)
+				string += "locus fullstop\n"
+
+			try:
+				logMode = int(answer.split(',')[3])
+			except ValueError:
+				logMode = int(answer.split(',')[3],16)
+
+			string += "locus mode:"
+			if (logMode & 0x1):
+				string += " AlwaysLocate"
+			if (logMode & 0x2):
+				string += " FixOnly"
+			if (logMode & 0x4):
+				string += " Normal"
+			if (logMode & 0x8):
+				string += " Interval"
+			if (logMode & 0x10):
+				string += " Distance"
+			if (logMode & 0x20):
+				string += " Speed"
+			string += "\n"
+
+			string += 'locus content: {:d}\n'.format(int(answer.split(',')[4]))
+			string += 'locus interval: {:d} [s]\n'.format(int(answer.split(',')[5]))
+			string += 'locus distance: {:d} [m]\n'.format(int(answer.split(',')[6]))
+			string += 'locus speed: {:d} [m/s]\n'.format(int(answer.split(',')[7]))
+			string += 'locus logging: {:d}\n'.format(not(bool(answer.split(',')[8])))
+			string += "Data records: {:s}\n".format(answer.split(',')[9])
+			string += "{:s}% flash used:\n".format(answer.split(",")[10].split("*")[0])
+			print(string)
 			ser.close()
 		
 		elif flag == "--start-logging":
@@ -432,11 +481,23 @@ def main(argv):
 			ser.close()
 
 		elif flag == "--dump":
+			n = int(input("Set number of records to be dumped.."))
 			ser = open_serial(argv[0],9600)
 			answer = write_cmd(ser, PMTK_SET_NMEA_OUTPUT_OFF).strip()
 			answer = write_cmd(ser, PMTK_DUMP_FLASH)
-			for i in range(0, 20):
-				print(ser.readline())
+			
+			# dump locus content to temporary file
+			fd = open("/tmp/.locus","w")
+			for i in range(0, n):
+				fd.write(ser.readline().decode("utf-8"))
+			fd.close()
+
+			# convert to waypoints
+			[timestamps, fix, lat, lon, alt] = locus_parse_waypoints("/tmp/.locus")
+			today = date.today()
+			fp = "{:s}-{:s}-{:s}".format(today.year,today.month,today.day)
+			waypoints_to_kml(fp+".kml")
+			waypoints_to_gpx(fp+".gpx")
 
 			#else:
 			#	print("failed to turn NMEA output off")
@@ -508,11 +569,11 @@ def main(argv):
 
 		elif flag == "--nmea-to-kml":
 			fp = input("Set input file path..\n")
-			nmea_to_kml(fp, fp.split(".")[0]+".kml")
+			waypoints_to_kml(nmea_parse_waypoints(fp), fp.split(".")[0]+".kml")
 
 		elif flag == "--nmea-to-gpx":
 			fp = input("Set input file path..\n")
-			nmea_to_gpx(fp, fp.split(".")[0]+".gpx")
+			waypoints_to_gpx(nmea_parse_waypoints(fp), fp.split(".")[0]+".gpx")
 
 		elif flag == "--view-coordinates":
 			fp = input("Set input file path [.nmea]..\n")
