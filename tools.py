@@ -32,6 +32,7 @@ PMTK_SET_NMEA_OUTPUT_OFF = "$PMTK314,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28\r\
 PMTK_START_LOG = "$PMTK185,0*22\r\n"
 PMTK_STOP_LOG = "$PMTK185,1*23\r\n"
 PMTK_QUERY_STATUS = "$PMTK183*38\r\n"
+PMTK_DUMP_FLASH = "$PMTK622,1*29\r\n"
 PMTK_ERASE_FLASH = "$PMTK184,1*22\r\n"
 
 PMTK_ENABLE_SBAS = "$PMTK313,1*2E\r\n"
@@ -40,9 +41,7 @@ PMTK_ENABLE_WAAS = "$PMTK301,2*2E\r\n"
 PMTK_STANDBY = "$PMTK161,0*28\r\n"
 PMTK_STANDBY_SUCCESS = "$PMTK001,161,3*36\r\n"
 PMTK_AWAKE = "$PMTK010,002*2D\r\n"
-
 PMTK_Q_RELEASE = "$PMTK605*31\r\n"
-PMTK_DUMP_LOCUS_DATA = "$PMTK622,0*28\r\n"
 
 PGCMD_ANTENNA = "$PGCMD,33,1*6C\r\n"
 PGCMD_NOANTENNA = "$PGCMD,33,0*6D\r\n"
@@ -435,8 +434,7 @@ def main(argv):
 		elif flag == "--dump":
 			ser = open_serial(argv[0],9600)
 			answer = write_cmd(ser, PMTK_SET_NMEA_OUTPUT_OFF).strip()
-			#if (answer == "$PMTK001,314,3*36"):
-			answer = write_cmd(ser, PMTK_DUMP_LOCUS_DATA)
+			answer = write_cmd(ser, PMTK_DUMP_FLASH)
 			for i in range(0, 20):
 				print(ser.readline())
 
