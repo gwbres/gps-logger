@@ -381,19 +381,38 @@ def main(argv):
 				string = "Status:\n"
 				string += "SN {:s}\n".format(answer.split(",")[1])
 			
-				log = int(answer.split(",")[2])
-				if (log):
-					string += "Overlapped logging mode\n" 
+				logType = int(answer.split(",")[2])
+				string += "Log type: "
+				if (logType == 0):
+					string += "locus overlap\n"
 				else:
-					string += "FullStop logging mode\n"
+					string += "locus fullstop\n"
 
-				string += "Logging interval: {:s}\n".format(answer.split(",")[3])
-				string += "Logging distance: {:s}\n".format(answer.split(",")[4])
-				string += "Logging speed setting: {:s}\n".format(answer.split(",")[5])
-				string += "Logging: {:s}\n".format(answer.split(",")[6])
-				string += "Data record: {:s}\n".format(answer.split(",")[7])
-				string += "Flash usage: {:s}%\n".format(answer.split(",")[8].split("*")[0])
+				logMode = int(answer.split(',')[3])
+				string += "locus mode:"
+				if (logMode & 0x1):
+					string += " AlwaysLocate"
+				if (logMode & 0x2):
+					string += " FixOnly"
+				if (logMode & 0x4):
+					string += " Normal"
+				if (logMode & 0x8):
+					string += " Interval"
+				if (logMode & 0x10)
+					string += " Distance"
+				if (logMode & 0x20)
+					string += " Speed"
+				string += "\n"
+
+				string += 'locus content: {:d}\n'.format(int(answer.split(',')[4]))
+				string += 'locus interval: {:d} [s]\n'.format(int(answer.split(',')[5]))
+				string += 'locus distance: {:d} [m]\n'.format(int(answer.split(',')[6]))
+				string += 'locus speed: {:d} [m/s]\n'.format(int(answer.split(',')[7]))
+				string += 'locus logging: {:d}\n'.format(not(bool(answer.split(',')[8])))
+				string += "Data records: {:s}\n".format(answer.split(',')[9])
+				string += "{:s}% flash used:\n".format(answer.split(",")[10].split("*")[0])
 				print(string)
+
 			else:
 				print("Error")
 				print(answer)
