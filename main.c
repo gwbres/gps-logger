@@ -26,15 +26,19 @@
 #define LED				BIT0 // P1
 #define RXD				BIT1 // P1 UART: Rx
 #define TXD				BIT2 // P1 UART: Tx
-#define START_BTN		BIT0 // P2
-#define STOP_BTN		BIT1 // P2
-#define ERASE_BTN		BIT2 // P2
-volatile 
 
 #define BUFSIZE	128
 volatile int tx_ptr;
 volatile int bytes_to_send;
 char tx_buf[BUFSIZE];
+
+#define START_BTN		BIT0 // P2
+#define STOP_BTN		BIT1 // P2
+#define ERASE_BTN		BIT2 // P2
+
+volatile uint8_t debouncing;
+volatile int debounce_cnt;
+#define DEBOUNCE_CNT_MAX	1024
 
 #ifdef LOW_POWER
 	volatile int wdcnt;
@@ -86,7 +90,9 @@ void init_timers(void){
 	TACTL |= MC_0; // stop
 	TACTL = TASSEL_2 + ID_2 + TAIE; // SMCLK
 	TA0R = 0;
-	CCR0 = 10000;
+	// debouncer will run for
+	// (CCR0+1)*DEBOUNCE_CNT_MAX/1E6 [s]
+	CCR0 = 128-1;
 	CCTL0 |= CCIE; // CCR0 IE
 	TACTL |= MC_2; // continuous op. mode
 }
@@ -104,6 +110,8 @@ void init_gpio(void){
 	P2IFG &= ~START_BTN; 
 	P2IFG &= ~STOP_BTN;
 	P2IFG &= ~ERASE_BTN;
+	debounce_cnt = 0;
+	debouncing &= 0x00;
 }
 
 void init_uart(void){
@@ -150,12 +158,25 @@ void pmtk_module_tests(void){
 
 #pragma vector = TIMER0_A0_VECTOR
 __interrupt void CCR0_ISR(void){
+	if (debouncing){
+		if (debounce_cnt < DEBOUNCE_CNT_MAX-1)
+			debounce_cnt++;
+		else {
+			debounce_cnt &= 0;
+			debouncing &= 0x00;
+		}
+	}
 	TA0R = 0;
 }
 
 #pragma vector = PORT2_VECTOR
 __interrupt void P2_ISR(void){
-	P1OUT ^= LED;
+	if (!debouncing){ 
+		P1OUT ^= LED;
+		debounce_cnt &= 0;
+		debouncing |= 0x01;
+	}
+	
 #ifdef LOW_POWER
 	__bic_SR_register_on_exit(CPUOFF);
 	WDTCTL = WDTPW + WDTHOLD;
