@@ -253,9 +253,13 @@ def locus_parse_waypoints(fp):
 	waypoints = []
 	fd = open(fp, "r")
 	for line in fd:
-		data, checksum = line.split('*')
+		if not(line.startswith('$PMTKLOX,1')):
+			continue
+
 		#TODO verify checkum
-		data = data[3:] # rm cmd/type/Line number
+		# checksum(line.split('*'))
+
+		data = line.split(',')[3:] # rm cmd/type/line number
 		bytes = toByteArray("".join(data))
 
 		chunksize = 16 # basic logging
@@ -484,23 +488,22 @@ def main(argv):
 			n = int(input("Set number of records to be dumped.."))
 			ser = open_serial(argv[0],9600)
 			answer = write_cmd(ser, PMTK_SET_NMEA_OUTPUT_OFF).strip()
-			answer = write_cmd(ser, PMTK_DUMP_FLASH)
+			#answer = write_cmd(ser, PMTK_DUMP_FLASH)
 			
+			"""
 			# dump locus content to temporary file
 			fd = open("/tmp/.locus","w")
 			for i in range(0, n):
 				fd.write(ser.readline().decode("utf-8"))
 			fd.close()
-
+			"""
+	
 			# convert to waypoints
 			[timestamps, fix, lat, lon, alt] = locus_parse_waypoints("/tmp/.locus")
 			today = date.today()
 			fp = "{:s}-{:s}-{:s}".format(today.year,today.month,today.day)
 			waypoints_to_kml(fp+".kml")
 			waypoints_to_gpx(fp+".gpx")
-
-			#else:
-			#	print("failed to turn NMEA output off")
 
 			ser.close()
 
