@@ -36,6 +36,7 @@ char tx_buf[BUFSIZE];
 #define STOP_BTN		BIT1 // P2
 #define ERASE_BTN		BIT2 // P2
 
+volatile uint8_t _pending;
 volatile uint8_t debouncing;
 volatile int debounce_cnt;
 #define DEBOUNCE_CNT_MAX	1024
@@ -54,7 +55,18 @@ void pmtk_module_tests(void);
 	
 int main(int argc, char **argv){
 	init_platform();
-	while(1);
+	while(1){
+		if (_pending & 0x01){
+			GPS_start_logging();
+			_pending &= 0x00;
+		} else if (_pending & 0x02){
+			GPS_stop_logging();
+			_pending &= 0x00;
+		} else if (_pending & 0x04){
+			GPS_erase_flash();
+			_pending &= 0x00;
+		}
+	}
 	return 0;
 }
 
@@ -110,6 +122,8 @@ void init_gpio(void){
 	P2IFG &= ~START_BTN; 
 	P2IFG &= ~STOP_BTN;
 	P2IFG &= ~ERASE_BTN;
+	// initialize
+	_pending &= 0x00;
 	debounce_cnt = 0;
 	debouncing &= 0x00;
 }
@@ -159,9 +173,10 @@ void pmtk_module_tests(void){
 #pragma vector = TIMER0_A0_VECTOR
 __interrupt void CCR0_ISR(void){
 	if (debouncing){
-		if (debounce_cnt < DEBOUNCE_CNT_MAX-1)
+		if (debounce_cnt < DEBOUNCE_CNT_MAX-1){
 			debounce_cnt++;
-		else {
+			P1OUT ^= LED;
+		} else {
 			debounce_cnt &= 0;
 			debouncing &= 0x00;
 		}
@@ -172,9 +187,16 @@ __interrupt void CCR0_ISR(void){
 #pragma vector = PORT2_VECTOR
 __interrupt void P2_ISR(void){
 	if (!debouncing){ 
-		P1OUT ^= LED;
 		debounce_cnt &= 0;
+		P1OUT ^= LED;
 		debouncing |= 0x01;
+
+		if (P2IFG & START_BTN)
+			_pending |= 0x01;
+		else if (P2IFG & STOP_BTN)
+			_pending |= (0x01<<1);
+		else if (P2IFG & ERASE_BTN)
+			_pending |= (0x01<<2);
 	}
 	
 #ifdef LOW_POWER
