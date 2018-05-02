@@ -23,12 +23,13 @@
 #include <string.h>
 #include <msp430g2553.h>
 
-#define LED_UART		BIT0
-#define RXD				BIT1 // UART: Rx
-#define TXD				BIT2 // UART: Tx
-#define START_BTN		BIT3
-#define STOP_BTN		BIT4
-#define ERASE_BTN		BIT5
+#define LED				BIT0 // P1
+#define RXD				BIT1 // P1 UART: Rx
+#define TXD				BIT2 // P1 UART: Tx
+#define START_BTN		BIT0 // P2
+#define STOP_BTN		BIT1 // P2
+#define ERASE_BTN		BIT2 // P2
+volatile 
 
 #define BUFSIZE	128
 volatile int tx_ptr;
@@ -91,19 +92,18 @@ void init_timers(void){
 }
 
 void init_gpio(void){
-	P2DIR = 0xff;
-	P2OUT &= 0x00; 
-
-	P1DIR |= LED_UART;
+	P1DIR |= LED;
 	P1DIR |= RXD+TXD;
 	P1SEL |= RXD+TXD; // USCI requires 
 	P1SEL2 |= RXD+TXD; // special opmode
-	P1REN |= START_BTN; // internal pull up
 	P1OUT &= 0x00;
 
-	P1IE |= START_BTN; // enable ISR
-	P1IES |= START_BTN; // falling edge
-	P1IFG &= ~START_BTN; // clear flag
+	P2OUT &= 0x00; 
+	P2IE |= START_BTN+STOP_BTN+ERASE_BTN; // enable required ISR
+	// clear related flags
+	P2IFG &= ~START_BTN; 
+	P2IFG &= ~STOP_BTN;
+	P2IFG &= ~ERASE_BTN;
 }
 
 void init_uart(void){
@@ -148,35 +148,29 @@ void pmtk_module_tests(void){
 	GPS_enable_SBAS();
 }
 
-
 #pragma vector = TIMER0_A0_VECTOR
 __interrupt void CCR0_ISR(void){
 	TA0R = 0;
 }
 
-#pragma vector = PORT1_VECTOR
-__interrupt void P1_ISR(void){
+#pragma vector = PORT2_VECTOR
+__interrupt void P2_ISR(void){
+	P1OUT ^= LED;
 #ifdef LOW_POWER
 	__bic_SR_register_on_exit(CPUOFF);
 	WDTCTL = WDTPW + WDTHOLD;
 #endif
-	tx_ptr = 0;
-	strcpy(tx_buf, "P1.3 IRQ\n");
-	bytes_to_send = strlen(tx_buf);
-	UC0IE |= UCA0TXIE; // TX IE
-	while (UCA0STAT & UCBUSY);
-	
-	P1IFG &= ~START_BTN; // clear IFG
+	// clear flag
+	if (P2IFG & START_BTN) P2IFG &= ~START_BTN;
+	if (P2IFG & STOP_BTN) P2IFG &= ~STOP_BTN;
+	if (P2IFG & ERASE_BTN) P2IFG &= ~ERASE_BTN;
 }
 
 #pragma vector = USCIAB0TX_VECTOR
 __interrupt void USCI0TX_ISR(void){
-	P1OUT |= LED_UART;
 	UCA0TXBUF = tx_buf[tx_ptr++];
-	
 	if (tx_ptr == bytes_to_send-1){ // tx done
 		UC0IE &= ~UCA0TXIE; // disable TX ISR
-		P1OUT &= ~LED_UART;
 	} 
 }
 
