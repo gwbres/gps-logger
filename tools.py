@@ -3,7 +3,7 @@
 import sys
 import serial
 import time
-from datetime import date
+import datetime
 
 import geoplotlib
 from geoplotlib.utils import read_csv
@@ -16,6 +16,7 @@ PMTK_SET_NMEA_UPDATE_2HZ = "$PMTK220,500*2B\r\n"
 PMTK_SET_NMEA_UPDATE_5HZ = "$PMTK220,200*2C\r\n"
 PMTK_SET_NMEA_UPDATE_10HZ = "$PMTK220,100*2F\r\n"
 
+PMTK_API_Q_FIX_CTRL = "$PMTK400*36\r\n"
 PMTK_API_SET_FIX_CTL_100_MILLIHERTZ = "$PMTK300,10000,0,0,0,0*2C\r\n" 
 PMTK_API_SET_FIX_CTL_200_MILLIHERTZ = "$PMTK300,5000,0,0,0,0*18\r\n" 
 PMTK_API_SET_FIX_CTL_1HZ = "$PMTK300,1000,0,0,0,0*1C\r\n"
@@ -55,6 +56,7 @@ def print_help():
 	string = " █▀▀█ ▒█▀▀█ ▒█▀▀▀█ 　 ▀▀█▀▀ ▒█▀▀▀█ ▒█▀▀▀█ ▒█░░░ ▒█▀▀▀█\n▒█░▄▄ ▒█▄▄█ ░▀▀▀▄▄ 　 ░▒█░░ ▒█░░▒█ ▒█░░▒█ ▒█░░░ ░▀▀▀▄▄\n▒█▄▄█ ▒█░░░ ▒█▄▄▄█ 　 ░▒█░░ ▒█▄▄▄█ ▒█▄▄▄█ ▒█▄▄█ ▒█▄▄▄█\n"
 
 	string += "\nPMTK module:\n"
+	string += "--port\n\tSet serial port to be used\n\tex: --port=/dev/ttyUSB0\n"
 	string += "--status\n\tQuery status\n"
 	string += "--start-logging\n\tGPS module starts recording frame\n"
 	string += "--stop-logging\n\tModule stops recording frames\n"
@@ -63,13 +65,15 @@ def print_help():
 	
 	string += "\nPMTK module [advanced]\n"
 	string += "--baud\n\tSet GPS serial rate [9600,57600] b/s\n"
-	string += "--fix-rate\n\tSet LED fix blink rate\n"
+	string += "--query-fix-rate\n\tCheck current fix rate\n"
 	string += "--nmea-rate\n\tSet GPS frames update rate [10Hz,5Hz,2Hz,1Hz,200mHz,100mHz]\n"
 	string += "--nmea-output\n\tSet nmea frames type to be produced [RMC,RMCGGA,ALL,OFF]\n"
 
 	string += "\nData toolbox:\n"
 	string += "--nmea-to-kml\n\tConverts .nmea file to .kml file (google earth, ..)\n"
 	string += "--nmea-to-gpx\n\tConverts .nmea file to .gpx file (Garmin, etc..)\n"
+	string += "--locus-to-kml\n\tConvers .locus data to .kml file\n"
+	string += "--locus-to-gpx\n\tConvers .locus data to .gpx file\n"
 	string += "--view-coordinates\n\tDraws waypoints found in .nmea, .kml, .gpx data file onto map\n"
 
 	print(string)
@@ -220,24 +224,22 @@ def nmea_parse_waypoints(fp):
 	return waypoints
 
 # converts string of bytes into byte array
-def toByteArray(str):
-	bytes = []
-	while (len(str) > 1):
-		byte = str[2:]
-		bytes.append(int(byte,16))
-		str = str[2::]
-	return bytes
+def pack4Bytes(string):
+	Bytes = []
+	for i in range(0, int(len(string)/2)):
+		Bytes.append(int(string[int(i*2):int(i*2)+2],16))
+	return Bytes
 
-def parseInt(bytes):
-	n = ((0xFF & bytes[1]) << 8) | (0xFF & bytes[0])
+def parseInt(Bytes):
+	n = ((0xFF & Bytes[1]) << 8) | (0xFF & Bytes[0])
 	return n
 
-def parseLong(bytes):
-	n = ((0xFF & bytes[3]) << 24) | ((0xFF & bytes[2]) << 16) | ((0xFF & bytes[1]) << 8) | (0xFF & bytes[0]) 
+def parseLong(Bytes):
+	n = ((0xFF & Bytes[3]) << 24) | ((0xFF & Bytes[2]) << 16) | ((0xFF & Bytes[1]) << 8) | (0xFF & Bytes[0]) 
 	return n
 
-def parseFloat(bytes):
-	longValue = parseLong(bytes)
+def parseFloat(Bytes):
+	longValue = parseLong(Bytes)
 	exponent = ((longValue >> 23) & 0xff) # float
 	exponent -= 127.0
 	exponent = pow(2,exponent)
@@ -248,11 +250,12 @@ def parseFloat(bytes):
 		floatValue = -floatValue
 	return floatValue 
 
-# parses all waypoints contained in locus flash memory
+# parses all waypoints contained in locus flash memory/data file
 def locus_parse_waypoints(fp):
 	waypoints = []
 	fd = open(fp, "r")
 	for line in fd:
+		# only keep valid data
 		if not(line.startswith('$PMTKLOX,1')):
 			continue
 
@@ -260,19 +263,38 @@ def locus_parse_waypoints(fp):
 		# checksum(line.split('*'))
 
 		data = line.split(',')[3:] # rm cmd/type/line number
-		bytes = toByteArray("".join(data))
+		
+		timestamp = parseLong(pack4Bytes(data[8]))
+		if (timestamp > 4290000000):
+			continue
 
-		chunksize = 16 # basic logging
-		while (len(bytes) >= chunksize):
-			timestamp = bytes[:chunksize][0:4] 
-			date = datetime.fromtimestamp(timestamp)
-			fix = bytes[:chunksize][4]
-			lat = parseFloat(bytes[:chunksize][5:9])
-			lon = parseFloat(bytes[:chunksize][9:13])
-			alt = parseInt(bytes[:chunksize][13:15])
-			bytes = bytes[chunksize:]
-			waypoint = [lat, lon, alt, ""]
-			waypoints.append(waypoint)
+		print(len(data))
+
+		date = datetime.datetime.fromtimestamp(timestamp)
+		string = "Date: {:s}\n".format(str(date))
+		
+		lat = parseFloat(pack4Bytes(data[18]))
+		string += "Lat: {:f}\n".format(lat)
+		
+		lon = parseFloat(pack4Bytes(data[20]))
+		string += "Lon: {:f}\n".format(lon)
+		
+		alt = parseFloat(pack4Bytes(data[22]))
+		string += "Alt: {:f}\n".format(alt)
+
+		print(string)
+		"""
+		{
+			"datetime": "2013-10-10T04:52:25", 
+			"fix": 2, 
+			"height": 56, 
+			"latitude": 40.1347017448785, 
+			"longitude": -75.2062849052292
+		}, 
+
+		"""
+		return 0
+
 	fd.close()
 
 # puts data into given file in csv format
@@ -424,9 +446,15 @@ def main(argv):
 		print_help()
 		return -1
 
+	port = None
+
 	for flag in argv:
-		if flag == "--status":
-			ser = open_serial(argv[0],9600)
+		if (flag.split("=")[0] == "--port"):
+			port = flag.split("=")[-1]
+			continue
+
+		elif flag == "--status":
+			ser = open_serial(port,9600)
 			answer = write_cmd(ser, PMTK_QUERY_STATUS)
 
 			print(answer)
@@ -471,7 +499,7 @@ def main(argv):
 			ser.close()
 		
 		elif flag == "--start-logging":
-			ser = open_serial(argv[0],9600)
+			ser = open_serial(port,9600)
 			answer = write_cmd(ser, PMTK_START_LOG).strip()
 			if (answer == "$PMTK001,185,3*3C"):
 				print("Logger has been started")
@@ -480,13 +508,13 @@ def main(argv):
 			ser.close()
 		
 		elif flag == "--stop-logging":
-			ser = open_serial(argv[0],9600)
+			ser = open_serial(port,9600)
 			print(write_cmd(ser, PMTK_STOP_LOG))
 			ser.close()
 
 		elif flag == "--dump":
 			n = int(input("Set number of records to be dumped.."))
-			ser = open_serial(argv[0],9600)
+			ser = open_serial(port,9600)
 			answer = write_cmd(ser, PMTK_SET_NMEA_OUTPUT_OFF).strip()
 			#answer = write_cmd(ser, PMTK_DUMP_FLASH)
 			
@@ -500,7 +528,7 @@ def main(argv):
 	
 			# convert to waypoints
 			[timestamps, fix, lat, lon, alt] = locus_parse_waypoints("/tmp/.locus")
-			today = date.today()
+			today = datetime.date.today()
 			fp = "{:s}-{:s}-{:s}".format(today.year,today.month,today.day)
 			waypoints_to_kml(fp+".kml")
 			waypoints_to_gpx(fp+".gpx")
@@ -510,14 +538,14 @@ def main(argv):
 		elif flag == "--erase-flash":
 			c = input("Are you sure? [Y/N]")
 			if (c == "Y"):
-				ser = open_serial(argv[0],9600)
+				ser = open_serial(port,9600)
 				print(write_cmd(ser, PMTK_ERASE_FLASH))
 				#expecting: $PMTK001,184,3*3D<CR><LF>
 				ser.close()
 
 		elif flag == "--baud":
 			b = input("Select baud [9600;57600]")
-			#print(write_cmd(open_serial(argv[0],*),b)
+			#print(write_cmd(open_serial(port,*),b)
 
 		elif flag == "--nmea-rate":
 			r = input("Set GPS frames rate [100mHz, 200mHz, 1Hz, 2Hz, 5Hz, 10Hz]")
@@ -539,7 +567,7 @@ def main(argv):
 				print("Rate {:s} is not supported")
 				print("Switching back to 1 Hz default rate")
 			
-			ser = open_serial(argv[0],9600)
+			ser = open_serial(port,9600)
 			answer = write_cmd(ser,cmd).strip()
 			if (answer == "$PMTK001,220,3*30"):
 				print("Success")
@@ -547,6 +575,11 @@ def main(argv):
 				print("Error: {:s}".format(answer))
 
 			ser.close()
+
+		elif flag == "--query-fix-rate":
+			ser = open_serial(port,9600)
+			answer = write_cmd(ser,PMTK_API_Q_FIX_CTRL).strip()
+			print(answer)
 
 		elif flag == "--nmea-output":
 			output = input("Set nmea output frames [RMC,RMC-GGA,ALL,OFF]..")
@@ -562,7 +595,7 @@ def main(argv):
 				else:
 					cmd = PMTK_SET_NMEA_OUTPUT_ALL_DATA
 
-				ser = open_serial(argv[0],9600)
+				ser = open_serial(port,9600)
 				answer = write_cmd(ser,cmd).strip()
 				if (answer == "$PMTK001,314,3*36"):
 					print("Success")
@@ -573,10 +606,18 @@ def main(argv):
 		elif flag == "--nmea-to-kml":
 			fp = input("Set input file path..\n")
 			waypoints_to_kml(nmea_parse_waypoints(fp), fp.split(".")[0]+".kml")
+		
+		elif flag == "--locus-to-kml":
+			fp = input("Set input file path..\n")
+			waypoints = locus_parse_waypoints(fp)
 
 		elif flag == "--nmea-to-gpx":
 			fp = input("Set input file path..\n")
 			waypoints_to_gpx(nmea_parse_waypoints(fp), fp.split(".")[0]+".gpx")
+
+		elif flag == "--locus-to-gpx":
+			fp = input("Set input file path..\n")
+			waypoints = locus_parse_waypoints(fp)
 
 		elif flag == "--view-coordinates":
 			fp = input("Set input file path [.nmea]..\n")
