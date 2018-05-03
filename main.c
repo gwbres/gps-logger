@@ -162,14 +162,6 @@ void wait_for_answer(void){
 	__delay_cycles(0xfffff);
 }
 
-void welcome(void){
-	tx_ptr = 0;
-	strcpy(tx_buf, "\r\n| GPS logger v1.0 |\r\n");
-	bytes_to_send = strlen(tx_buf)+4;
-	UC0IE |= UCA0TXIE; // TX IE
-	while (UCA0STAT & UCBUSY);
-}
-
 #pragma vector = TIMER0_A0_VECTOR
 __interrupt void CCR0_ISR(void){
 	if (debouncing){
