@@ -106,7 +106,7 @@ void init_platform(void){
 	_mask |= P1IE;
 #ifdef LOW_POWER
 	wdcnt = 0;
-	_mask |= LPM3_bits;
+	_mask |= LPM0_bits;
 #endif
 	_BIS_SR(_mask); 
 }
@@ -221,7 +221,7 @@ __interrupt void USCI0RX_ISR(void){
 #pragma vector = WDT_VECTOR
 __interrupt void watchdog_timer(void){
 	if (wdcnt == WDT_NO_ACT-1){
-		_BIS_SR(LPM3_bits + GIE); // LPM3 hibernation from now on
+		_BIS_SR(LPM0_bits + GIE); // LPM3 hibernation from now on
 		WDTCTL = WDTPW + WDTHOLD; // kill WDT
 		wdcnt = 0;
 	} else
