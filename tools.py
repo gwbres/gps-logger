@@ -36,6 +36,10 @@ PMTK_QUERY_STATUS = "$PMTK183*38\r\n"
 PMTK_DUMP_FLASH = "$PMTK622,1*29\r\n"
 PMTK_ERASE_FLASH = "$PMTK184,1*22\r\n"
 
+PMTK_LOCUS_1_SECONDS = "$PMTK187,1,1*3C\r\n"
+PMTK_LOCUS_5_SECONDS = "$PMTK187,1,5*38\r\n"
+PMTK_LOCUS_15_SECONDS = "$PMTK187,1,15*09\r\n"
+
 PMTK_ENABLE_SBAS = "$PMTK313,1*2E\r\n"
 PMTK_ENABLE_WAAS = "$PMTK301,2*2E\r\n"
 
@@ -66,6 +70,7 @@ def print_help():
 	string += "\nPMTK module [advanced]\n"
 	string += "--baud\n\tSet GPS serial rate [9600,57600] b/s\n"
 	string += "--query-fix-rate\n\tCheck current fix rate\n"
+	string += "--set-locus-rate\n\tSet internal logging rate [1s,5s,15s]\n"
 	string += "--nmea-rate\n\tSet GPS frames update rate [10Hz,5Hz,2Hz,1Hz,200mHz,100mHz]\n"
 	string += "--nmea-output\n\tSet nmea frames type to be produced [RMC,RMCGGA,ALL,OFF]\n"
 
@@ -580,6 +585,21 @@ def main(argv):
 			ser = open_serial(port,9600)
 			answer = write_cmd(ser,PMTK_API_Q_FIX_CTRL).strip()
 			print(answer)
+	
+		elif flag == "--set-locus-rate":
+			ser = open_serial(port, 9600)
+			rate = input("Set logging rate..[1s,5s,15s]") 
+			if (not(rate in ["1s","5s","15s"])):
+				print("Rate {:s} is not supported, aborting".format(rate))
+			else:
+				if rate == "1s":
+					cmd = PMTK_LOCUS_1_SECONDS 
+				elif rate == "5s":
+					cmd = PMTK_LOCUS_5_SECONDS 
+				elif rate == "15s":
+					cmd = PMTK_LOCUS_15_SECONDS 
+				answer = write_cmd(port, cmd).strip()
+				print(answer)
 
 		elif flag == "--nmea-output":
 			output = input("Set nmea output frames [RMC,RMC-GGA,ALL,OFF]..")
