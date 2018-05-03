@@ -89,7 +89,9 @@ void GPS_stand_by(void){
 
 void GPS_wake_up(void){
 	tx_ptr &= 0;
-	strcpy(tx_buf, "Hi\n"); // 1 byte will wake up the module
-	bytes_to_send = strlen(tx_buf)+2;
+	strcpy(tx_buf, "Hi\n"); // 1 byte will suffice to wake module up
+	bytes_to_send = strlen(tx_buf)+1;
+	UC0IE |= UCA0TXIE;
 	while (UCA0STAT & UCBUSY);
+	__delay_cycles(16383); // give module some time
 }
