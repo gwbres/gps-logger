@@ -50,18 +50,22 @@ void init_gpio(void);
 void init_uart(void);
 void init_timers(void);
 void init_platform(void);
-void welcome(void);
-void pmtk_module_tests(void);
-	
+
 int main(int argc, char **argv){
 	init_platform();
 	while(1){
 		if (_pending & 0x01){
+			GPS_wake_up();
+			__delay_cycles(10000);
 			GPS_start_logging();
 			_pending &= 0x00;
+
 		} else if (_pending & 0x02){
 			GPS_stop_logging();
+			__delay_cycles(10000);
+			GPS_stand_by(); // save power
 			_pending &= 0x00;
+
 		} else if (_pending & 0x04){
 			GPS_erase_flash();
 			_pending &= 0x00;
@@ -93,9 +97,6 @@ void init_platform(void){
 	_mask |= LPM3_bits;
 #endif
 	_BIS_SR(_mask); 
-
-	welcome();
-	pmtk_module_tests();
 }
 
 void init_timers(void){
@@ -143,31 +144,6 @@ void welcome(void){
 	bytes_to_send = strlen(tx_buf)+4;
 	UC0IE |= UCA0TXIE; // TX IE
 	while (UCA0STAT & UCBUSY);
-}
-
-void pmtk_module_tests(void){
-// baud:
-	GPS_set_baud(9600);
-	GPS_set_baud(57600);
-// flash:
-	GPS_start_logging();
-	GPS_stop_logging();
-	GPS_erase_flash();
-// FIX:
-	GPS_set_fixblink_rate(PMTK_FIX_RATE_100mhz);
-	GPS_set_fixblink_rate(PMTK_FIX_RATE_200mhz);
-	GPS_set_fixblink_rate(PMTK_FIX_RATE_1hz);
-	GPS_set_fixblink_rate(PMTK_FIX_RATE_5hz);
-// NMEA:
-	GPS_NMEA_output(PMTK_NMEA_OFF);
-	GPS_NMEA_output(PMTK_NMEA_ONLY_RMC_GGA);
-	GPS_NMEA_output(PMTK_NMEA_ALL_DATA);
-// others:
-	GPS_stand_by();
-	GPS_antenna_mode(PMTK_NO_ANTENNA);
-	GPS_antenna_mode(PMTK_USE_ANTENNA);
-	GPS_enable_WAAS();
-	GPS_enable_SBAS();
 }
 
 #pragma vector = TIMER0_A0_VECTOR
