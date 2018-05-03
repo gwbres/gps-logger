@@ -32,6 +32,8 @@ volatile int tx_ptr;
 volatile int bytes_to_send;
 char tx_buf[BUFSIZE];
 
+volatile char rx_done;
+
 #define START_BTN		BIT0 // P2
 #define STOP_BTN		BIT1 // P2
 #define ERASE_BTN		BIT2 // P2
@@ -50,24 +52,33 @@ void init_gpio(void);
 void init_uart(void);
 void init_timers(void);
 void init_platform(void);
+void wait_for_answer(void);
 
 int main(int argc, char **argv){
 	init_platform();
+	GPS_NMEA_output(PMTK_NMEA_OFF); // save power
+
 	while(1){
 		if (_pending & 0x01){
 			GPS_wake_up();
-			__delay_cycles(10000);
+			GPS_NMEA_output(PMTK_NMEA_OFF); 
+			wait_for_answer();
 			GPS_start_logging();
+			wait_for_answer();
 			_pending &= 0x00;
 
 		} else if (_pending & 0x02){
 			GPS_stop_logging();
-			__delay_cycles(10000);
-			GPS_stand_by(); // save power
+			wait_for_answer();
+			GPS_NMEA_output(PMTK_NMEA_OFF);
+			wait_for_answer();
+			GPS_stand_by(); // hibernate from now on 
+			wait_for_answer();
 			_pending &= 0x00;
 
 		} else if (_pending & 0x04){
 			GPS_erase_flash();
+			wait_for_answer();
 			_pending &= 0x00;
 		}
 	}
@@ -90,6 +101,7 @@ void init_platform(void){
 	init_gpio();
 	init_timers();
 	init_uart();
+
 	_mask |= GIE;
 	_mask |= P1IE;
 #ifdef LOW_POWER
@@ -135,7 +147,19 @@ void init_uart(void){
 	UCA0BR1 = 0x00; // 115200b/s @1M
 	UCA0MCTL = UCBRS2 + UCBRS0; // 5% modulation
 	UCA0CTL1 &= ~UCSWRST;
-	UC0IE &= ~UCA0TXIE; // disable TX ISR
+	// disable ISR at the moment
+	UC0IE &= ~UCA0TXIE;
+	UC0IE &= ~UCA0RXIE;
+	rx_done &= 0x00;
+}
+
+void wait_for_answer(void){
+/* TODO should wait proper answer
+	rx_done &= 0x00;
+	UC0IE |= UCA0RXIE;
+	while (!rx_done);
+*/
+	__delay_cycles(0xfffff);
 }
 
 void welcome(void){
@@ -190,6 +214,14 @@ __interrupt void USCI0TX_ISR(void){
 	UCA0TXBUF = tx_buf[tx_ptr++];
 	if (tx_ptr == bytes_to_send-1){ // tx done
 		UC0IE &= ~UCA0TXIE; // disable TX ISR
+	} 
+}
+
+#pragma vector = USCIAB0RX_VECTOR
+__interrupt void USCI0RX_ISR(void){
+	if (UCA0RXBUF == '\n'){ // PMTK module answered
+		rx_done |= 0x01;
+		UC0IE &= ~UCA0RXIE; // we're done
 	} 
 }
 
