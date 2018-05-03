@@ -6,28 +6,9 @@ extern char tx_buf[128];
 extern volatile int bytes_to_send;
 extern volatile int tx_ptr;
 
-void GPS_set_baud(int baud){
-	tx_ptr = 0; // rst
-
-	switch (baud) {
-		case 57600:
-			strcpy(tx_buf, PMTK_SET_BAUD_57600);
-			break;
-
-		default:
-		case 9600:
-			strcpy(tx_buf, PMTK_SET_BAUD_9600);
-			break;
-	}
-
-	bytes_to_send = strlen(tx_buf)+2;
-	UC0IE |= UCA0TXIE;
-	while (UCA0STAT & UCBUSY);
-}
-
 void GPS_start_logging(void){
 	tx_ptr = 0;
-	strcpy(tx_buf, PMTK_STARTLOG);
+	strcpy(tx_buf, PMTK_START_LOG);
 	bytes_to_send = strlen(tx_buf)+2;
 	UC0IE |= UCA0TXIE;
 	while (UCA0STAT & UCBUSY);
@@ -35,7 +16,7 @@ void GPS_start_logging(void){
 
 void GPS_stop_logging(void){
 	tx_ptr = 0;
-	strcpy(tx_buf, PMTK_STOPLOG);
+	strcpy(tx_buf, PMTK_STOP_LOG);
 	bytes_to_send = strlen(tx_buf)+2;
 	UC0IE |= UCA0TXIE;
 	while (UCA0STAT & UCBUSY);
@@ -71,15 +52,6 @@ void GPS_set_fixblink_rate(int rate){
 			break;
 	}
 	
-	strcpy(tx_buf, PMTK_STANDBY);
-	bytes_to_send = strlen(tx_buf)+2;
-	UC0IE |= UCA0TXIE;
-	while (UCA0STAT & UCBUSY);
-}
-
-void GPS_stand_by(void){
-	tx_ptr = 0;
-	strcpy(tx_buf, PMTK_STANDBY);
 	bytes_to_send = strlen(tx_buf)+2;
 	UC0IE |= UCA0TXIE;
 	while (UCA0STAT & UCBUSY);
@@ -108,37 +80,16 @@ void GPS_NMEA_output(int output){
 	while (UCA0STAT & UCBUSY);
 }
 
-void GPS_antenna_mode(int mode){
-	tx_ptr = 0;
-	
-	switch (mode) {
-		case PMTK_USE_ANTENNA:
-			strcpy(tx_buf, PGCMD_USE_ANTENNA);
-			break;
-
-		default:
-		case PMTK_NO_ANTENNA:
-			strcpy(tx_buf, PGCMD_NO_ANTENNA);
-			break;
-	}
-	
+void GPS_stand_by(void){
+	tx_ptr &= 0;
+	strcpy(tx_buf, PMTK_STAND_BY);
 	bytes_to_send = strlen(tx_buf)+2;
-	UC0IE |= UCA0TXIE;
 	while (UCA0STAT & UCBUSY);
 }
 
-void GPS_enable_WAAS(void){
-	tx_ptr = 0;
-	strcpy(tx_buf, PMTK_ENABLE_WAAS);
+void GPS_wake_up(void){
+	tx_ptr &= 0;
+	strcpy(tx_buf, "Hi\n"); // 1 byte will wake up the module
 	bytes_to_send = strlen(tx_buf)+2;
-	UC0IE |= UCA0TXIE;
-	while (UCA0STAT & UCBUSY);
-}
-
-void GPS_enable_SBAS(void){
-	tx_ptr = 0;
-	strcpy(tx_buf, PMTK_ENABLE_SBAS);
-	bytes_to_send = strlen(tx_buf)+2;
-	UC0IE |= UCA0TXIE;
 	while (UCA0STAT & UCBUSY);
 }
