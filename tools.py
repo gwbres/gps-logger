@@ -366,6 +366,30 @@ def waypoints_to_kml(waypoints, kml):
 	kmlfd.close()
 	print("NMEA file {:s} content converted to KML in {:s}".format(nmea,kml))
 
+def kml_parse_waypoints(fp):
+	waypoints = []
+	fd = open(fp,"r")
+	coordinates_found = False
+	for line in fd:
+		line = line.strip()
+		
+		if (not(coordinates_found)):
+			if ("<coordinates>" in line):
+				coordinates_found = True
+		
+		else:
+			if ("</coordinates>" in line):
+				break
+			else:
+				parsed = line.split(",")
+				lat = float(parsed[1])
+				lon = float(parsed[0])
+				alt = float(parsed[2])
+				waypoints.append([lat,lon,alt])
+
+	fd.close()
+	return waypoints
+
 # converts waypoints to .gpx file
 def waypoints_to_gpx(waypoints, gpx):
 	gpxfd = open(gpx,"w")
@@ -521,7 +545,9 @@ def main(argv):
 			n = int(input("Set number of records to be dumped.."))
 			ser = open_serial(port,9600)
 			answer = write_cmd(ser, PMTK_SET_NMEA_OUTPUT_OFF).strip()
-			#answer = write_cmd(ser, PMTK_DUMP_FLASH)
+			answer = write_cmd(ser, PMTK_DUMP_FLASH)
+			ser.close()
+			return 0
 			
 			"""
 			# dump locus content to temporary file
@@ -544,8 +570,11 @@ def main(argv):
 			c = input("Are you sure? [Y/N]")
 			if (c == "Y"):
 				ser = open_serial(port,9600)
-				print(write_cmd(ser, PMTK_ERASE_FLASH))
-				#expecting: $PMTK001,184,3*3D<CR><LF>
+				answer = write_cmd(ser, PMTK_ERASE_FLASH).strip()
+				if (answer == "$PMTK001,184,3*3D"):
+					print("Flash has been erased")
+				else:
+					print("error")
 				ser.close()
 
 		elif flag == "--baud":
@@ -598,8 +627,9 @@ def main(argv):
 					cmd = PMTK_LOCUS_5_SECONDS 
 				elif rate == "15s":
 					cmd = PMTK_LOCUS_15_SECONDS 
-				answer = write_cmd(port, cmd).strip()
+				answer = write_cmd(ser, cmd).strip()
 				print(answer)
+			ser.close()
 
 		elif flag == "--nmea-output":
 			output = input("Set nmea output frames [RMC,RMC-GGA,ALL,OFF]..")
