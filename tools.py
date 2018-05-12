@@ -79,9 +79,12 @@ def print_help():
 	string += "\nData toolbox:\n"
 	string += "--nmea-to-kml\n\tConverts .nmea file to .kml file (google earth, ..)\n"
 	string += "--nmea-to-gpx\n\tConverts .nmea file to .gpx file (Garmin, etc..)\n"
-	string += "--locus-to-kml\n\tConvers .locus data to .kml file\n"
-	string += "--locus-to-gpx\n\tConvers .locus data to .gpx file\n"
+	string += "--locus-to-kml\n\tConverts .locus data to .kml file\n"
+	string += "--locus-to-gpx\n\tConverts .locus data to .gpx file\n"
+
+	string += "\nGPS Viewer:\n"
 	string += "--view-coordinates\n\tDraws waypoints found in .nmea, .kml, .gpx data file onto map\n"
+	string += "--elevation-profile\n\tDisplay elevation profile\n"
 
 	print(string)
 
