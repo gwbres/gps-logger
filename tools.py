@@ -1,8 +1,9 @@
 #! /usr/bin/env python3
 
 import sys
-import serial
 import time
+import math
+import serial
 import datetime
 import matplotlib.pyplot as plt
 
@@ -108,6 +109,16 @@ def coord_to_decimal_degrees(coord, islong=False):
 def knots_to_kmph(knots):
 	mph = knots*1.15078
 	return mph*1.60934
+
+# Harversine: computes distance
+# between two waypoints
+def Haversine(wp1, wp2):
+	deltaLat = math.radians(wp2[0])-math.radians(wp1[0])
+	deltaLon = math.radians(wp2[1])-math.radians(wp1[1])
+	lat1rad = math.radians(wp1[0])
+	lat2rad = math.radians(wp2[0])
+	a = math.sqrt((math.sin(deltaLat/2))**2+math.cos(lat1rad)*math.cos(lat2rad)*(math.sin(deltaLon/2))**2)
+	return 2*6371000*math.asin(a)
 
 # GPGGA:
 # class descriptor for GPGGA NMEA frames
@@ -476,19 +487,20 @@ def view_coordinates(fp, elevation_profile=None):
 		plt.ylabel("Elevation [m]")
 		plt.grid(which='both', axis='both')
 		ax = fig.add_subplot(111)
-		#dates = []
-		x = []
+		dist = []
 		i = 0
 		elevation = []
 		for waypoint in waypoints:
 			elevation.append(waypoint[2])
-			x.append(i)
+			if (len(dist) == 0):
+				accDist = 0
+			else:
+				accDist += Haversine(waypoint, waypoints[i-1])
+			dist.append(accDist)
 			i += 1
-			#dates.append(datetime.datetime.strptime(waypoint[3].split('.')[0],'%H:%M:%S'))
-		#ax.axhline(0)
-		ax.plot(elevation)
-		ax.fill_between(x, elevation, 0, alpha=0.1)
-		#plt.gcf().autofmt_xdate() # improve data rendering
+
+		ax.plot(dist, elevation)
+		ax.fill_between(dist, elevation, 0)
 		plt.show()
 	
 	geoplotlib.show()
