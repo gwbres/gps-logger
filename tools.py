@@ -4,6 +4,7 @@ import sys
 import serial
 import time
 import datetime
+import matplotlib.pyplot as plt
 
 import geoplotlib
 from geoplotlib.utils import read_csv
@@ -448,7 +449,8 @@ def open_serial(tty, baudrate):
 	return ser
 
 # draws coordinates contained in given file
-def view_coordinates(fp):
+# elevation profile can be optionnaly added
+def view_coordinates(fp, elevation_profile=None):
 	ext = fp.split(".")[-1]
 	if (ext == "nmea"):
 		waypoints = nmea_parse_waypoints(fp)
@@ -466,6 +468,29 @@ def view_coordinates(fp):
 	data = read_csv("/tmp/tmp.csv")
 	geoplotlib.dot(data, point_size=4)
 	geoplotlib.labels(data, "label", color=[0,0,255,255], font_size=10, anchor_x='center')
+	
+	if (elevation_profile):
+		fig = plt.figure(0)
+		plt.subplot(111)
+		plt.xlabel("Distance [m]")
+		plt.ylabel("Elevation [m]")
+		plt.grid(which='both', axis='both')
+		ax = fig.add_subplot(111)
+		#dates = []
+		x = []
+		i = 0
+		elevation = []
+		for waypoint in waypoints:
+			elevation.append(waypoint[2])
+			x.append(i)
+			i += 1
+			#dates.append(datetime.datetime.strptime(waypoint[3].split('.')[0],'%H:%M:%S'))
+		#ax.axhline(0)
+		ax.plot(elevation)
+		ax.fill_between(x, elevation, 0, alpha=0.1)
+		#plt.gcf().autofmt_xdate() # improve data rendering
+		plt.show()
+	
 	geoplotlib.show()
 
 def main(argv):
@@ -475,14 +500,61 @@ def main(argv):
 		print_help()
 		return -1
 
+	commands = []
+	view_profile = None
+	files = []
 	port = None
 
 	for flag in argv:
 		if (flag.split("=")[0] == "--port"):
 			port = flag.split("=")[-1]
-			continue
-
+		
+		# GPS logger
 		elif flag == "--status":
+			commands.append("status")
+		elif flag == "--start-logging":
+			commands.append("start")
+		elif flag == "--stop-logging":
+			commands.append("stop")
+		elif flag == "--locus-rate":
+			commands.append("locus-rate")
+		
+		# internal flash
+		elif flag == "--dump":
+			commands.append("dump")
+		elif flag == "--erase-flash":
+			commands.append("erase")
+
+		# GPS serial bus 
+		elif flag == "--nmea-rate":
+			commands.append("nmea-rate")
+		elif flag == "--nmea-output":
+			commands.append("nmea-output")
+		elif flag == "--baud":
+			commands.append("baud")
+
+		# GPS Fix
+		elif flag == "--led-fix-rate":
+			commands.append("led-rate")
+
+		# GPS data tools
+		elif flag == "--nmea-to-kml":
+			commands.append("nmea-to-kml")
+		elif flag == "--nmea-to-gpx":
+			commands.append("nmea-to-gpx")
+
+		# Input file paths
+		elif (flag.split("=")[0] == "--file"):
+			files.append(flag.split("=")[-1])
+		
+		# coordinates viewer
+		elif flag == "--view-coordinates":
+			commands.append("viewer")
+		elif flag == "--elevation-profile":
+			view_profile = True
+
+	for command in commands:
+		if (command == "status"):
 			ser = open_serial(port,9600)
 			answer = write_cmd(ser, PMTK_QUERY_STATUS)
 
@@ -527,7 +599,7 @@ def main(argv):
 			print(string)
 			ser.close()
 		
-		elif flag == "--start-logging":
+		elif (command == "start"):
 			ser = open_serial(port,9600)
 			answer = write_cmd(ser, PMTK_START_LOG).strip()
 			if (answer == "$PMTK001,185,3*3C"):
@@ -536,18 +608,16 @@ def main(argv):
 				print("Error: {:s}".format(answer))
 			ser.close()
 		
-		elif flag == "--stop-logging":
+		elif (command == "stop"):
 			ser = open_serial(port,9600)
 			print(write_cmd(ser, PMTK_STOP_LOG))
 			ser.close()
 
-		elif flag == "--dump":
-			n = int(input("Set number of records to be dumped.."))
+		elif (command == "dump"):
 			ser = open_serial(port,9600)
-			answer = write_cmd(ser, PMTK_SET_NMEA_OUTPUT_OFF).strip()
-			answer = write_cmd(ser, PMTK_DUMP_FLASH)
+			write_cmd(ser, PMTK_SET_NMEA_OUTPUT_OFF)
+			write_cmd(ser, PMTK_DUMP_FLASH)
 			ser.close()
-			return 0
 			
 			"""
 			# dump locus content to temporary file
@@ -555,7 +625,6 @@ def main(argv):
 			for i in range(0, n):
 				fd.write(ser.readline().decode("utf-8"))
 			fd.close()
-			"""
 	
 			# convert to waypoints
 			[timestamps, fix, lat, lon, alt] = locus_parse_waypoints("/tmp/.locus")
@@ -565,9 +634,10 @@ def main(argv):
 			waypoints_to_gpx(fp+".gpx")
 
 			ser.close()
+			"""
 
-		elif flag == "--erase-flash":
-			c = input("Are you sure? [Y/N]")
+		elif (command == "erase"):
+			c = input("Erasing.. are you sure? [Y/N]")
 			if (c == "Y"):
 				ser = open_serial(port,9600)
 				answer = write_cmd(ser, PMTK_ERASE_FLASH).strip()
@@ -577,11 +647,7 @@ def main(argv):
 					print("error")
 				ser.close()
 
-		elif flag == "--baud":
-			b = input("Select baud [9600;57600]")
-			#print(write_cmd(open_serial(port,*),b)
-
-		elif flag == "--nmea-rate":
+		elif (command == "nmea-rate"):
 			r = input("Set GPS frames rate [100mHz, 200mHz, 1Hz, 2Hz, 5Hz, 10Hz]")
 
 			if r == "100mHz":
@@ -607,16 +673,14 @@ def main(argv):
 				print("Success")
 			else:
 				print("Error: {:s}".format(answer))
-
 			ser.close()
 
-		elif flag == "--query-fix-rate":
+		elif (command == "led-rate"):
 			ser = open_serial(port,9600)
 			answer = write_cmd(ser,PMTK_API_Q_FIX_CTRL).strip()
 			print(answer)
 	
-		elif flag == "--set-locus-rate":
-			ser = open_serial(port, 9600)
+		elif (command == "locus-rate"):
 			rate = input("Set logging rate..[1s,5s,15s]") 
 			if (not(rate in ["1s","5s","15s"])):
 				print("Rate {:s} is not supported, aborting".format(rate))
@@ -627,11 +691,12 @@ def main(argv):
 					cmd = PMTK_LOCUS_5_SECONDS 
 				elif rate == "15s":
 					cmd = PMTK_LOCUS_15_SECONDS 
+				ser = open_serial(port, 9600)
 				answer = write_cmd(ser, cmd).strip()
 				print(answer)
-			ser.close()
+				ser.close()
 
-		elif flag == "--nmea-output":
+		elif (command == "nmea-output"):
 			output = input("Set nmea output frames [RMC,RMC-GGA,ALL,OFF]..")
 			if not(output in ["RMC","RMC-GGA","ALL","OFF"]):
 				print("NMEA mode {:s} is not valid".format(output))
@@ -653,39 +718,44 @@ def main(argv):
 					print("Error: {:s}".format(answer))
 				ser.close()
 
-		elif flag == "--nmea-to-kml":
-			fp = input("Set input file path..\n")
+		elif (command == "nmea-to-kml"):
+			if (len(files) == 0):
+				fp = input("Set input file path..\n")
+			else:
+				fp = files[0]
+				files = files[1:]
+				
 			waypoints_to_kml(nmea_parse_waypoints(fp), fp.split(".")[0]+".kml")
 		
-		elif flag == "--locus-to-kml":
-			fp = input("Set input file path..\n")
-			waypoints = locus_parse_waypoints(fp)
-
-		elif flag == "--nmea-to-gpx":
-			fp = input("Set input file path..\n")
+		elif (command == "nmea-to-gpx"):
+			if (len(files) == 0):
+				fp = input("Set input file path..\n")
+			else:
+				fp = files[0]
+				files = files[1:]
 			waypoints_to_gpx(nmea_parse_waypoints(fp), fp.split(".")[0]+".gpx")
 
-		elif flag == "--locus-to-gpx":
-			fp = input("Set input file path..\n")
-			waypoints = locus_parse_waypoints(fp)
-
-		elif flag == "--view-coordinates":
-			fp = input("Set input file path [.nmea]..\n")
-			view_coordinates(fp)
+		elif (command == "viewer"):
+			if (len(files) == 0):
+				fp = input("Set input file path..\n")
+			else:
+				fp = files[0]
+				files = files[1:]
+			view_coordinates(fp, elevation_profile=view_profile)
 		
-		elif flag == "--help":
+		elif command == "--help":
 			print_help()
 			return 0
 
-		elif flag == "--h":
+		elif command == "--h":
 			print_help()
 			return 0
 
-		elif flag == "help":
+		elif command == "help":
 			print_help()
 			return 0
 
 		else:
-			print("Unknown flag {:s}".format(flag))
+			print("Command {:s} is not supported".format(command))
 
 main(sys.argv)
