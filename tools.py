@@ -483,7 +483,7 @@ def view_coordinates(fp, elevation_profile=None):
 	if (elevation_profile):
 		fig = plt.figure(0)
 		plt.subplot(111)
-		plt.xlabel("Distance [m]")
+		plt.xlabel("Overall distance [m]")
 		plt.ylabel("Elevation [m]")
 		plt.grid(which='both', axis='both')
 		ax = fig.add_subplot(111)
