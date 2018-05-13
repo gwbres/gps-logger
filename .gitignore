@@ -2,3 +2,4 @@
 *.nmea
 *.kml
 *.gpx
+PCB/*
