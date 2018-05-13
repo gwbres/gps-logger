@@ -1,16 +1,31 @@
-## Portable GPS data logger using MSP430 by TI
+## Mini GPS data logger 
 
-The idea behind this project is to have a long lasting
-portable solution to store GPS data.
+The idea behind this project is to have a 
+long lasting GPS data logger.
 
-MSP430 is used to kick start the GPS module,
+The selected module is the PMTK3339 GPS receiver
+provided by Adafruits on a breakout board.
+
+An MSP430 is used to kick start the GPS module,
 this device has extensive options to reduce power
-consumption. 
+consumption.
 
-### What you can learn from this project
+### What you can learn from this project
 
 * How to compile code for MSP430 devices
 * Use MSP430 features to reduce power consumption
+* Manipulate coordinates
+	* D° M' S"
+	* Decimal degrees
+	* etc.. 
+* Discover NMEA data 
+
+### Examples
+
+Test 1: first try
+
+![alt text](tests/test1.png)
+![alt text](tests/profile1.png)
 
 ### Getting started
 
