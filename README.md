@@ -50,6 +50,13 @@ make
 # run
 ```
 
+### PCB
+
+Board to control the GPS module with
+an MSP430 and two user buttons.
+
+![alt text](PCB/top-bottom.svg)
+
 ### Python tool
 
 A python tool to control the PMKT module over
