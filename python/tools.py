@@ -45,262 +45,6 @@ def print_help():
 
 	print(string)
 
-# parses all waypoints (lat,lon,alt)
-# contained in .nmea file
-# results [[lat0,lon0,a0],[lat1,lon1,a1],..,[lat(n),lon(n),a(n)]]
-# were lat(i),lon(i) are expressed in decimal degrees
-def nmea_parse_waypoints(fp):
-	waypoints = []
-	fd=open(fp,"r")
-	for line in fd:
-		line = line.strip()
-		
-		if (line.startswith("$GPGGA")):
-			GPS = GPGGA(line)
-		elif (line.startswith("$GPRMC")):
-			GPS = GPRMC(line)
-		else:
-			continue
-		
-		latdeg = coord_to_decimal_degrees(GPS.get_lat()[0])
-		if (GPS.get_lat()[1] == "S"):
-			latdeg *= (-1)
-		
-		londeg = coord_to_decimal_degrees(GPS.get_long()[0], islong=True)
-		if (GPS.get_long()[1] == "W"):
-			londeg *= (-1)
-
-		utc = GPS.get_utc()
-		h = utc[0:2]
-		m = utc[2:4]
-		s = utc[4:]
-		text = "{:d}:{:d}:{:f}".format(int(h),int(m),float(s)) # brought up by geoplotlib.labels()
-
-		waypoint = [latdeg,londeg,GPS.get_alt(),text]
-		waypoints.append(waypoint)
-
-	fd.close()
-	return waypoints
-
-# converts string of bytes into byte array
-def pack4Bytes(string):
-	Bytes = []
-	for i in range(0, int(len(string)/2)):
-		Bytes.append(int(string[int(i*2):int(i*2)+2],16))
-	return Bytes
-
-def parseInt(Bytes):
-	n = ((0xFF & Bytes[1]) << 8) | (0xFF & Bytes[0])
-	return n
-
-def parseLong(Bytes):
-	n = ((0xFF & Bytes[3]) << 24) | ((0xFF & Bytes[2]) << 16) | ((0xFF & Bytes[1]) << 8) | (0xFF & Bytes[0]) 
-	return n
-
-def parseFloat(Bytes):
-	longValue = parseLong(Bytes)
-	exponent = ((longValue >> 23) & 0xff) # float
-	exponent -= 127.0
-	exponent = pow(2,exponent)
-	mantissa = (longValue & 0x7fffff)
-	mantissa = 1.0 + (mantissa/8388607.0)
-	floatValue = mantissa * exponent
-	if ((longValue & 0x80000000) == 0x80000000):
-		floatValue = -floatValue
-	return floatValue 
-
-# parses all waypoints contained in locus flash memory/data file
-def locus_parse_waypoints(fp):
-	waypoints = []
-	fd = open(fp, "r")
-	for line in fd:
-		# only keep valid data
-		if not(line.startswith('$PMTKLOX,1')):
-			continue
-
-		#TODO verify checkum
-		# checksum(line.split('*'))
-
-		data = line.split(',')[3:] # rm cmd/type/line number
-		
-		timestamp = parseLong(pack4Bytes(data[8]))
-		if (timestamp > 4290000000):
-			continue
-
-		print(len(data))
-
-		date = datetime.datetime.fromtimestamp(timestamp)
-		string = "Date: {:s}\n".format(str(date))
-		
-		lat = parseFloat(pack4Bytes(data[18]))
-		string += "Lat: {:f}\n".format(lat)
-		
-		lon = parseFloat(pack4Bytes(data[20]))
-		string += "Lon: {:f}\n".format(lon)
-		
-		alt = parseFloat(pack4Bytes(data[22]))
-		string += "Alt: {:f}\n".format(alt)
-
-		print(string)
-		"""
-		{
-			"datetime": "2013-10-10T04:52:25", 
-			"fix": 2, 
-			"height": 56, 
-			"latitude": 40.1347017448785, 
-			"longitude": -75.2062849052292
-		}, 
-
-		"""
-		return 0
-
-	fd.close()
-
-# puts data into given file in csv format
-# line0: titles[0],titles[1],..,titles[n-1],
-# line1: data[0][0],data[0][1],..,data[0][n-1],
-#  .
-#  .
-# line[l-1]: data[l-1][0],...,data[l-1][n-1]
-def to_csv(fp, titles, data):
-	fd=open(fp,"w")
-	line = ""
-	for title in titles:
-		line += "{:s},".format(title)
-	line += "\n"
-	fd.write(line)
-
-	for j in range(0, len(data)):	
-		line = ""
-		for i in range(0, len(data[j])):
-			line += "{:s},".format(str(data[j][i]) )
-		line += "\n"
-		fd.write(line)
-	fd.close()
-
-# Converts waypoints to .kml file
-def waypoints_to_kml(waypoints, kml):
-	kmlfd = open(kml, "w")
-
-	# initialize kml file
-	kmlfd.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-	kmlfd.write('<kml xmlns="http://earth.google.com/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">\n')
-	kmlfd.write('<Folder>\n')
-
-	# track infos
-	kmlfd.write('\t<name>Imported from {:s}</name>\n'.format(nmea))
-	kmlfd.write('\t<Placemark>\n')
-	kmlfd.write('\t\t<name>Track</name>\n')
-
-	# track style
-	kmlfd.write('\t\t<Style>\n')
-	kmlfd.write('\t\t\t<LineStyle>\n')
-	kmlfd.write('\t\t\t\t<color>00cc00cc</color>\n')
-	kmlfd.write('\t\t\t\t<width>4</width>\n')
-	kmlfd.write('\t\t\t</LineStyle>\n')
-	kmlfd.write('\t\t</Style>\n')
-
-	# track
-	kmlfd.write('\t\t<LineString>\n')
-	kmlfd.write('\t\t\t<altitudeMode>relativeToGround</altitudeMode>\n')
-	kmlfd.write('\t\t\t<coordinates>\n')
-
-	for waypoint in waypoints:
-		lat = waypoint[0]
-		lon = waypoint[1]
-		kmlfd.write('\t\t\t\t{:f},{:f},{:f}\n'.format(lon, lat, 0.0))
-
-	kmlfd.write('\t\t\t</coordinates>\n')
-	kmlfd.write('\t\t</LineString>\n')
-	
-	# finalize kml file 
-	kmlfd.write('\t</Placemark>\n')
-	kmlfd.write('\t</Folder>\n')
-	kmlfd.write('</kml>\n')
-	kmlfd.close()
-	print("NMEA file {:s} content converted to KML in {:s}".format(nmea,kml))
-
-def kml_parse_waypoints(fp):
-	waypoints = []
-	fd = open(fp,"r")
-	coordinates_found = False
-	for line in fd:
-		line = line.strip()
-		
-		if (not(coordinates_found)):
-			if ("<coordinates>" in line):
-				coordinates_found = True
-		
-		else:
-			if ("</coordinates>" in line):
-				break
-			else:
-				parsed = line.split(",")
-				lat = float(parsed[1])
-				lon = float(parsed[0])
-				alt = float(parsed[2])
-				waypoints.append([lat,lon,alt])
-
-	fd.close()
-	return waypoints
-
-# converts waypoints to .gpx file
-def waypoints_to_gpx(waypoints, gpx):
-	gpxfd = open(gpx,"w")
-	gpxfd.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-	gpxfd.write('<gpx version="1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\n')
-	gpxfd.write(' xmlns="http://www.topografix.com/GPX/1/0"\n')
-	gpxfd.write(' xsi:schemaLocation="http://www.topografix.com/GPX/1/0 http://www.topografix.com/GPX/1/0/gpx.xsd">\n')
-
-	gpxfd.write('\t<name>{:s}</name>\n'.format('Test'))
-	gpxfd.write('\t<desc>{:s}</desc>\n'.format("Test"))
-	gpxfd.write('\t<trk>\n')
-	gpxfd.write('\t\t<name>Track</name>\n')
-	gpxfd.write('\t\t<number>1</number>\n')
-	gpxfd.write('\t\t<trkseg>\n')
-
-	for waypoint in waypoints:
-		lat = waypoint[0]
-		lon = waypoint[1]
-		gpxfd.write('\t\t\t<trkpt lat="{:f}" lon="{:f}">\n'.format(lat,lon))
-		gpxfd.write('\t\t\t\t<ele>{:s}</ele>\n'.format("0"))
-		
-		"""
-		#TODO handle timestamps
-		utc = GPS.get_utc()
-		h = utc.split(".")[0][0:1]
-		m = utc.split(".")[0][2:3]
-		s = utc.split(".")[0][4:5]
-			
-		gpxfd.write('\t\t\t\t<time>20{:s}-{:s}-16T{:s}:{:s}:{:s}Z</time>\n'
-			.format(year,month,day,h,m,s)
-		)
-		"""
-		gpxfd.write('\t\t\t</trkpt>\n')
-			
-	gpxfd.write('\t\t</trkseg>\n')
-	gpxfd.write('\t</trk>\n')
-	gpxfd.write('</gpx>')
-	gpxfd.close()
-	print("NMEA file {:s} content converted to GPX in {:s}".format(nmea,gpx))
-
-# opens serial port
-def open_serial(tty, baudrate):
-	ser = serial.Serial(tty)
-	ser.baudrate = baudrate
-	ser.flushInput()
-	ser.flushOutput()
-	# setup
-	ser.bytesize = serial.EIGHTBITS
-	ser.parity = serial.PARITY_NONE
-	ser.stopbits = serial.STOPBITS_ONE
-	ser.timeout = 0
-	ser.xonxoff = 0
-	ser.rtscts = False
-	ser.dsrdtr = False
-	ser.writeTimeout = 2
-	return ser
-
 def main(argv):
 	argv = argv[1:]
 
@@ -532,8 +276,8 @@ def main(argv):
 			else:
 				fp = files[0]
 				files = files[1:]
-				
-			waypoints_to_kml(nmea_parse_waypoints(fp), fp.split(".")[0]+".kml")
+			
+			GPSTrack(fp).toKML(fp.split('.')[0]+'.kml')
 		
 		elif (command == "nmea-to-gpx"):
 			if (len(files) == 0):
@@ -541,7 +285,7 @@ def main(argv):
 			else:
 				fp = files[0]
 				files = files[1:]
-			waypoints_to_gpx(nmea_parse_waypoints(fp), fp.split(".")[0]+".gpx")
+			GPSTrack(fp).toGPX(fp.split('.')[0]+'.kml')
 
 		elif (command == "viewer"):
 			if (len(files) == 0):
@@ -549,7 +293,7 @@ def main(argv):
 			else:
 				fp = files[0]
 				files = files[1:]
-			view_coordinates(fp, elevation_profile=view_profile)
+			GPSTrack(fp).drawOnMap(elevationProfile=view_profile)
 		
 		elif command == "--help":
 			print_help()
