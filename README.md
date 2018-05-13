@@ -1,6 +1,18 @@
-# Portable GPS data logger using MSP430 by TI
+## Portable GPS data logger using MSP430 by TI
 
-# Getting started
+The idea behind this project is to have a long lasting
+portable solution to store GPS data.
+
+MSP430 is used to kick start the GPS module,
+this device has extensive options to reduce power
+consumption. 
+
+### What you can learn from this project
+
+* How to compile code for MSP430 devices
+* Use MSP430 features to reduce power consumption
+
+### Getting started
 
 Required packages:
 
@@ -14,7 +26,7 @@ compile the program with
 make
 ```
 
-# Use mspdebug to flag the program
+### Use mspdebug to flag the program
 
 ```bash
 # mspdebug rf2500
@@ -23,7 +35,7 @@ make
 # run
 ```
 
-# Python tool 
+### Python tool
 
 A python tool to control the PMKT module over
 serial port and manipulate .nmea data.
@@ -46,6 +58,7 @@ files (kml: Google earth.., gpx: OpenStreetMap, GPSVisualizer..).
 ```bash
 python3 python/tools.py --nmea-to-kml
 python3 python/tools.py --nmea-to-gpx
+python3 python/tools.py --nmea-to-kml --file=raw.nmea
 ```
 
 The script allows to view data waypoints contained
@@ -54,9 +67,19 @@ in a .nmea, a .kml or a .gpx file over a map, using
 
 ```bash
 python3 python/tools.py --view-coordinates
+python3 python/tools.py --view-coordinates --file=raw.nmea
+python3 python/tools.py --view-coordinates --file=raw.kml
+```
+
+Elevation profile can optionnally be drawn:
+
+```bash
+python3 python/tools.py --view-coordinates --file=raw.nmea --elevation-profile
 ```
 
 Required python packages to run the script:
 
-1. pyserial
-2. geoplotlib <https://github.com/andrea-cuttone/geoplotlib>
+1. python >= 3
+2. pyserial
+3. geoplotlib <https://github.com/andrea-cuttone/geoplotlib>
+4. matplotlib
