@@ -2,19 +2,20 @@
 
 # Getting started
 
+Required packages:
+
 ```bash
 # apt-get install binutils-msp430 gcc-msp430 msp430-libc mspdebug
 ```
 
-compile the application with
+compile the program with
 
 ```bash
 make
 ```
 
-# Flash the program onto MSP430x
+# Use mspdebug to flag the program
 
-flash with
 ```bash
 # mspdebug rf2500
 # erase
@@ -22,37 +23,37 @@ flash with
 # run
 ```
 
-# tools.py
+# Python tool 
 
 A python tool to control the PMKT module over
 serial port and manipulate .nmea data.
 
 ```bash
-python3 tools.py --help
+python3 python/tools.py --help
 ```
 
 The script can send known commands to the module
 over serial port.
 
 ```bash
-python3 tools.py /dev/ttyUSB0 --status
-python3 tools.py /dev/ttyUSB0 --start-logging
+python3 python/tools.py /dev/ttyUSB0 --status
+python3 python/tools.py /dev/ttyUSB0 --start-logging
 ```
 
 The script can convert .nmea files to .kml & .gpx
 files (kml: Google earth.., gpx: OpenStreetMap, GPSVisualizer..).
 
 ```bash
-python3 tools.py --nmea-to-kml
-python3 tools.py --nmea-to-gpx
+python3 python/tools.py --nmea-to-kml
+python3 python/tools.py --nmea-to-gpx
 ```
 
 The script allows to view data waypoints contained
 in a .nmea, a .kml or a .gpx file over a map, using
-the "geoplotlib" package.
+"geoplotlib":
 
 ```bash
-python3 tools.py --view-coordinates
+python3 python/tools.py --view-coordinates
 ```
 
 Required python packages to run the script:

@@ -5,53 +5,10 @@ import time
 import math
 import serial
 import datetime
-import matplotlib.pyplot as plt
 
-import geoplotlib
-from geoplotlib.utils import read_csv
-
-# PMTK module
-PMTK_SET_NMEA_UPDATE_100_MILLIHERTZ = "$PMTK220,10000*2F\r\n"
-PMTK_SET_NMEA_UPDATE_200_MILLIHERTZ = "$PMTK220,5000*1B\r\n"
-PMTK_SET_NMEA_UPDATE_1HZ = "$PMTK220,1000*1F\r\n"
-PMTK_SET_NMEA_UPDATE_2HZ = "$PMTK220,500*2B\r\n"
-PMTK_SET_NMEA_UPDATE_5HZ = "$PMTK220,200*2C\r\n"
-PMTK_SET_NMEA_UPDATE_10HZ = "$PMTK220,100*2F\r\n"
-
-PMTK_API_Q_FIX_CTRL = "$PMTK400*36\r\n"
-PMTK_API_SET_FIX_CTL_100_MILLIHERTZ = "$PMTK300,10000,0,0,0,0*2C\r\n" 
-PMTK_API_SET_FIX_CTL_200_MILLIHERTZ = "$PMTK300,5000,0,0,0,0*18\r\n" 
-PMTK_API_SET_FIX_CTL_1HZ = "$PMTK300,1000,0,0,0,0*1C\r\n"
-PMTK_API_SET_FIX_CTL_5HZ = "$PMTK300,200,0,0,0,0*2F\r\n"
-
-PMTK_SET_BAUD_57600 = "$PMTK251,57600*2C\r\n"
-PMTK_SET_BAUD_9600 = "$PMTK251,9600*17\r\n"
-
-PMTK_SET_NMEA_OUTPUT_RMC_ONLY = "$PMTK314,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*29\r\n"
-PMTK_SET_NMEA_OUTPUT_RMC_GGA = "$PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28\r\n"
-PMTK_SET_NMEA_OUTPUT_ALL_DATA = "$PMTK314,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0*28\r\n"
-PMTK_SET_NMEA_OUTPUT_OFF = "$PMTK314,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28\r\n"
-
-PMTK_START_LOG = "$PMTK185,0*22\r\n"
-PMTK_STOP_LOG = "$PMTK185,1*23\r\n"
-PMTK_QUERY_STATUS = "$PMTK183*38\r\n"
-PMTK_DUMP_FLASH = "$PMTK622,1*29\r\n"
-PMTK_ERASE_FLASH = "$PMTK184,1*22\r\n"
-
-PMTK_LOCUS_1_SECONDS = "$PMTK187,1,1*3C\r\n"
-PMTK_LOCUS_5_SECONDS = "$PMTK187,1,5*38\r\n"
-PMTK_LOCUS_15_SECONDS = "$PMTK187,1,15*09\r\n"
-
-PMTK_ENABLE_SBAS = "$PMTK313,1*2E\r\n"
-PMTK_ENABLE_WAAS = "$PMTK301,2*2E\r\n"
-
-PMTK_STANDBY = "$PMTK161,0*28\r\n"
-PMTK_STANDBY_SUCCESS = "$PMTK001,161,3*36\r\n"
-PMTK_AWAKE = "$PMTK010,002*2D\r\n"
-PMTK_Q_RELEASE = "$PMTK605*31\r\n"
-
-PGCMD_ANTENNA = "$PGCMD,33,1*6C\r\n"
-PGCMD_NOANTENNA = "$PGCMD,33,0*6D\r\n"
+from PMTK import *
+from GPSTrack import *
+from Waypoint import *
 
 def write_cmd(tty, cmd):
 	tty.write(bytes(cmd+"\n",encoding="utf-8"))
@@ -87,124 +44,6 @@ def print_help():
 	string += "--elevation-profile\n\tDisplay elevation profile\n"
 
 	print(string)
-
-# Converts parsed coordinates 
-# lat: ddmm.ssss
-# lon: dddmm.ssss
-# to D° M' S" 
-def coord_to_DMS(coord, islong=False):
-	if (islong):
-		D = int(coord.split(".")[0][0:3])
-		M = int(coord.split(".")[0][3:5])
-		S = float("0."+coord.split(".")[1])*60
-	else:
-		D = int(coord.split(".")[0][0:2])
-		M = int(coord.split(".")[0][2:4])
-		S = float("0."+coord.split(".")[1])*60
-	return [D, M, S]
-
-# converts GPS coordinates to decimal degrees
-# coord: ddmm.ssss
-def coord_to_decimal_degrees(coord, islong=False):
-	[D, M, S] = coord_to_DMS(coord, islong=islong)
-	return D+M/60+S/3600
-
-def knots_to_kmph(knots):
-	mph = knots*1.15078
-	return mph*1.60934
-
-# Harversine: computes distance
-# between two waypoints
-def Haversine(wp1, wp2):
-	deltaLat = math.radians(wp2[0])-math.radians(wp1[0])
-	deltaLon = math.radians(wp2[1])-math.radians(wp1[1])
-	lat1rad = math.radians(wp1[0])
-	lat2rad = math.radians(wp2[0])
-	a = math.sqrt((math.sin(deltaLat/2))**2+math.cos(lat1rad)*math.cos(lat2rad)*(math.sin(deltaLon/2))**2)
-	return 2*6371000*math.asin(a)
-
-# GPGGA:
-# class descriptor for GPGGA NMEA frames
-class GPGGA:
-	def __init__(self, csv):
-		self.utc = "000000.00"
-		self.lat = None
-		self.long = None
-		self.alt = "0" 
-		self.hdop = None
-
-		content = csv.split(",")[1:-1] # remove header and checksum
-		self.utc = content[0]
-		if ((content[1]) is not None): # missing if not FIXed
-			self.lat = [content[1],content[2]]
-			self.long = [content[3],content[4]]
-
-		# content[5]: '1' is GPS coordinates
-		# content[6]: number of sallites used
-	
-		# HDOP Horizontal dilution of Precision
-		if ((content[7] is not None)): # could be missing
-			self.hdop = content[7]
-		
-		if (content[8] != ""): # might be missing
-			self.alt = content[8] # content[9]='M' for meters
-
-	def get_utc(self):
-		return self.utc
-	
-	def get_long(self):
-		return self.long
-
-	def get_lat(self):
-		return self.lat
-	
-	def get_alt(self):
-		return self.alt
-	
-	def get_hdop(self):
-		return self.hdop
-	
-	def _type(self):
-		return "GPGGA"
-
-# GPRMC 
-# class descriptor for RMC frames
-class GPRMC:
-	def __init__(self, csv):
-		self.utc = "000000.00"
-		self.alt = None
-		self.lat = "0" 
-		self.long = None
-		
-		content = csv.split(",")[1:-1] # remove header & checksum
-		self.utc = content[0]
-		if (content[1] == 'A'): # 'A':valid (proceed), 'V' non valid
-			self.lat = [content[2],content[3]]
-			self.long = [content[4],content[5]]
-			self.speed = knots_to_kmph(float(content[6]))
-			# content[7] route sur le fond
-			self.date = content[7]
-
-	def _type(self):
-		return "GPRMC"
-
-	def get_utc(self):
-		return self.utc
-
-	def get_lat(self):
-		return self.lat
-
-	def get_alt(self):
-		return "0"
-
-	def get_long(self):
-		return self.long
-
-	def get_speed(self):
-		return self.speed
-
-	def get_date(self):
-		return self.date
 
 # parses all waypoints (lat,lon,alt)
 # contained in .nmea file
@@ -461,52 +300,6 @@ def open_serial(tty, baudrate):
 	ser.dsrdtr = False
 	ser.writeTimeout = 2
 	return ser
-
-# draws coordinates contained in given file
-# elevation profile can be optionnaly added
-def view_coordinates(fp, elevation_profile=None):
-	ext = fp.split(".")[-1]
-	if (ext == "nmea"):
-		waypoints = nmea_parse_waypoints(fp)
-	elif (ext == "kml"):
-		waypoints = kml_parse_waypoints(fp)
-	elif (ext == "gpx"):
-		waypoints = gpx_parse_waypoints(fp)
-	else:
-		print("File format {:s} is not supported".format(ext))
-		return -1
-
-	# use temporary .csv file 
-	# to make it compliant with geoplot lib.
-	to_csv("/tmp/tmp.csv", ["lat","lon","alt","label"], waypoints)
-	data = read_csv("/tmp/tmp.csv")
-	geoplotlib.dot(data, point_size=4)
-	geoplotlib.labels(data, "label", color=[0,0,255,255], font_size=10, anchor_x='center')
-	
-	if (elevation_profile):
-		fig = plt.figure(0)
-		plt.subplot(111)
-		plt.xlabel("Overall distance [m]")
-		plt.ylabel("Elevation [m]")
-		plt.grid(which='both', axis='both')
-		ax = fig.add_subplot(111)
-		dist = []
-		i = 0
-		elevation = []
-		for waypoint in waypoints:
-			elevation.append(waypoint[2])
-			if (len(dist) == 0):
-				accDist = 0
-			else:
-				accDist += Haversine(waypoint, waypoints[i-1])
-			dist.append(accDist)
-			i += 1
-
-		ax.plot(dist, elevation)
-		ax.fill_between(dist, elevation, 0)
-		plt.show()
-	
-	geoplotlib.show()
 
 def main(argv):
 	argv = argv[1:]
