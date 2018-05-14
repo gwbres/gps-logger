@@ -276,7 +276,6 @@ def main(argv):
 			else:
 				fp = files[0]
 				files = files[1:]
-			
 			GPSTrack(fp).toKML(fp.split('.')[0]+'.kml')
 		
 		elif (command == "nmea-to-gpx"):
@@ -285,7 +284,7 @@ def main(argv):
 			else:
 				fp = files[0]
 				files = files[1:]
-			GPSTrack(fp).toGPX(fp.split('.')[0]+'.kml')
+			GPSTrack(fp).toGPX(fp.split('.')[0]+'.gpx')
 
 		elif (command == "viewer"):
 			if (len(files) == 0):
