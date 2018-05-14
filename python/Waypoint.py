@@ -125,20 +125,14 @@ class Waypoint:
 		return [D,M,S]
 
 	def DMStoDDMMSSSS(self, DMS, isLongitude=False):
-		""" Formats D°M'S" to 'ddmm.ssss' string """
+		""" Converts D°M'S" to 'ddmm.ssss' string """
 
 		nD = 2
 		if (isLongitude):
 			nD += 1
 
-		dd = "{:d}".format(DMS[0])
-		if len(dd) < nD:
-			for i in range(0, 3-len(dd)):
-				dd = "0"+dd # zero padding
-
-		mm = "{:d}".format(DMS[1])
-		if (len(mm) < 2):
-			mm = "0"+mm # zero padding
+		dd = "{:d}".format(DMS[0]).zfill(nD)
+		mm = "{:d}".format(DMS[1]).zfill(2)
 		
 		fractionnal = (DMS[2]/60)%1
 		stringFract = "{:4f}".format(fractionnal)
