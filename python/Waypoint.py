@@ -45,6 +45,9 @@ class Waypoint:
 					self.speed = self.knotsToKmph(float(content[7]))
 					self.date = content[9] # ddmmyy
 
+			else:
+				raise NameError("Only $GGA & $RMC nmea frames are supported at the moment")
+
 		else:
 			DMS = self.decimalDegreesToDMS(latDeg)
 			if (latDeg < 0):
@@ -175,6 +178,7 @@ class Waypoint:
 		Returns zero padded hex string.
 		"""
 		check = 0
-		for c in line[1:]: # drop leading '$'
-			check = check^ord(c)
+		content = line[1:].split("*")[0] # drop leading '$'
+		for c in content: # drop leading '$'
+			check ^= ord(c)
 		return hex(check)[2:].upper().zfill(2) # zero padding / keep last 2 bits
