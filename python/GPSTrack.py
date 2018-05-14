@@ -17,14 +17,15 @@ class GPSTrack:
 		"""
 		self.waypoints = []
 
-		if (fp.split('.')[-1] == 'nmea'):
+		ext = fp.split('.')[-1]
+		if (ext == 'nmea'):
 			self.GPSTrackNMEA(fp)
 		
-		elif (fp.split('.')[-1] == 'kml'):
+		elif (ext == 'kml'):
 			self.GPSTrackKML(fp)
 		
 		else:
-			print("Not supported at the moment")
+			raise ValueError("GPS Track cannot be built from a '.{:s}' log file".format(ext))
 
 	def GPSTrackNMEA(self, fp):
 		"""
@@ -34,8 +35,11 @@ class GPSTrack:
 		fd = open(fp,"r")
 		for line in fd:
 			line = line.strip()
-			wp = Waypoint(nmea=line)
-			self.waypoints.append(Waypoint(nmea=line))
+			try:
+				self.waypoints.append(Waypoint(nmea=line))
+			except NameError: # not $GGA or $RMC frame
+				pass
+
 		fd.close()
 
 	def GPSTrackKML(self, fp):
