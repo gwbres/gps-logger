@@ -9,7 +9,7 @@ class Waypoint:
 	optionnal UTC timestamp and altitude.
 	"""
 	
-	def __init__(self, nmea=None, latDeg=None, lonDeg=None, utc=None, alt=None):
+	def __init__(self, nmea=None, locus=None, latDeg=None, lonDeg=None, utc=None, alt=None):
 		"""
 		Creates a Waypoint object
 		from either: an nmea frame (CSV)
@@ -47,6 +47,57 @@ class Waypoint:
 
 			else:
 				raise NameError("Only $GGA & $RMC nmea frames are supported at the moment")
+
+		elif (locus is not None):
+			content = locus.split(",")
+			checksum = content[-1].split("*")[-1]
+			expecting = self.checksum(locus)
+			if (checksum != expecting):
+				print('checksum ',checksum)
+				print('expecting ',expecting)
+				raise ValueError("Checksum is faulty for line {:s}".format(locus))
+			
+			if not(locus.startswith("$PMTKLOX,1")):
+				raise NameError("Non valid PMTKLOX/locus")
+
+			content = content[3:] # remove header,type,line number
+			content[-1] = content[-1].split('*')[0] # keep payload only
+			Bytes = []
+			for c in content:
+				Bytes.append(self.toByteArray(c))
+
+			n = 0
+			while (n < len(Bytes)):
+				b = Bytes[n:n+4]
+				b0 = b[0] # 4 bytes
+				b1 = b[1][0] # 1 byte
+				b2 = b[1][1:] # 3 bytes
+				b2.append(b[2][0]) # +1byte=4bytes
+				b3 = b[2][1:] # 3bytes
+				b3.append(b[3][0]) # +1byte=4bytes
+
+				if (b1 != 2): # GPS Fix
+					raise NameError("PMTKLOX/locus cannot be used")
+
+				date = datetime.datetime.fromtimestamp(self.parseInt32(b0))
+				latDeg = self.parseFloat32(b2)
+				DMS = self.decimalDegreesToDMS(latDeg)
+				if (latDeg < 0):
+					EM = "S"
+				else:
+					EM = "N"
+				self.lat = [self.DMStoDDMMSSSS(DMS),EM]
+
+				lonDeg = self.parseFloat32(b3)
+				DMS = self.decimalDegreesToDMS(lonDeg)
+				if (lonDeg < 0):
+					EM = "W"
+				else:
+					EM = "E"
+				self.lon = [self.DMStoDDMMSSSS(DMS, isLongitude=True),EM]
+				self.alt = str(self.parseInt16(b4)) 
+				n += 4
+
 
 		else:
 			DMS = self.decimalDegreesToDMS(latDeg)
@@ -182,3 +233,41 @@ class Waypoint:
 		for c in content: # drop leading '$'
 			check ^= ord(c)
 		return hex(check)[2:].upper().zfill(2) # zero padding / keep last 2 bits
+
+	def toByteArray(self, string):
+		"""
+		Converts a string into a byte array
+		"""
+		Bytes = []
+		n = 0
+		while (n < len(string)):
+			b = string[n:n+2]
+			Bytes.append(int(b,16)) # conversion
+			n += 2
+		return Bytes
+
+	def parseInt32(self, Bytes):
+		"""
+		Converts array of 4 bytes into
+		32 bit integer value
+		"""
+		return ((0xFF & Bytes[3]) << 24) | ((0xFF & Bytes[2]) << 16) | ((0xFF & Bytes[1]) << 8) | (0xFF & Bytes[0])    
+
+	def parseInt16(self, Bytes):
+		return (((0xFF & Bytes[1]) << 8) | (0xFF & Bytes[0]))
+	
+	def parseFloat32(self, Bytes):
+		"""
+		Convers array of 4 bytes into
+		32 bit float single precision number
+		"""
+		int32 = self.parseInt32(Bytes)
+		exponent = ((int32 >> 23)&0xff)
+		exponent -= 127.0
+		exponent = pow(2,exponent)
+		mantissa = (int32 & 0x7fffff)
+		mantissa = 1.0 + (mantissa/8388607.0)
+		floatValue = mantissa * exponent
+		if ((int32 & 0x80000000) == 0x80000000):
+			floatValue = -floatValue
+		return floatValue
