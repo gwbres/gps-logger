@@ -166,6 +166,26 @@ class Waypoint:
 	def getAltitude(self):
 		return self.alt
 
+	def getDate(self):
+		"""
+		Returns UTC time stamps
+		Date + UTC when possible
+		"""
+		string = ""
+		if (self.date is not None):
+			string += self.date()[0:2]
+			string += '/'+self.date()[2:4]
+			string += '/'+self.date()[4:6]+' '
+			format = "d/m/y H-M-S"
+		else:
+			format = "%H-%M-%S"
+		
+		string += self.utc.split('.')[0][0:2]
+		string += "-"+self.utc.split('.')[0][2:4]
+		string += "-"+self.utc.split('.')[0][4:6]
+
+		return datetime.datetime.strptime(string, format)
+
 	def toDMS(self):
 		"""
 		Converts self to D° M' S"
