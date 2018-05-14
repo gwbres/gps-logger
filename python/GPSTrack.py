@@ -24,6 +24,9 @@ class GPSTrack:
 		elif (ext == 'kml'):
 			self.GPSTrackKML(fp)
 		
+		elif (ext == 'locus'):
+			self.GPSTrackLOCUS(fp)
+		
 		else:
 			raise ValueError("GPS Track cannot be built from a '.{:s}' log file".format(ext))
 
@@ -65,6 +68,21 @@ class GPSTrack:
 					lon = float(parsed[0])
 					alt = parsed[2]
 					self.waypoints.append(Waypoint(latDeg=lat,lonDeg=lon,alt=alt))
+
+		fd.close()
+
+	def GPSTrackLOCUS(self, fp):
+		"""
+		Builds GPS Track by parsing all waypoints
+		in .locus log file
+		"""
+		fd = open(fp,"r")
+		for line in fd:
+			line = line.strip()
+			try:
+				self.waypoints.append(Waypoint(locus=line))
+			except NameError: # missing GPS fix 
+				pass
 
 		fd.close()
 
