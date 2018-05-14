@@ -55,7 +55,7 @@ make
 Board to control the GPS module with
 an MSP430 and two user buttons.
 
-![alt text](PCB/top-bottom.svg)
+![](PCB/top-bottom.png)
 
 ### Python tool
 
