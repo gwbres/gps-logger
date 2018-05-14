@@ -25,6 +25,11 @@ class Waypoint:
 		
 		if (nmea is not None):
 			content = nmea.split(",")
+			checksum = content[-1].split("*")[-1]
+			expecting = self.checksum(nmea)
+			if (checksum != expecting):
+				raise ValueError("Checksum is faulty for line {:s}".format(nmea))
+
 			if (content[0] == "$GPGGA"):
 				# GGA frame
 				self.utc = content[1]
@@ -163,3 +168,13 @@ class Waypoint:
 		lat2rad = math.radians(lat2)
 		a = math.sqrt((math.sin(deltaLat/2))**2+math.cos(lat1rad)*math.cos(lat2rad)*(math.sin(deltaLon/2))**2)
 		return 2*6371000*math.asin(a)
+
+	def checksum(self, line):
+		""" 
+		Evaluates checksum for given nmea/locus line.
+		Returns zero padded hex string.
+		"""
+		check = 0
+		for c in line[1:]: # drop leading '$'
+			check = check^ord(c)
+		return hex(check)[2:].upper().zfill(2) # zero padding / keep last 2 bits

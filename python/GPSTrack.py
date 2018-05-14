@@ -27,15 +27,22 @@ class GPSTrack:
 			print("Not supported at the moment")
 
 	def GPSTrackNMEA(self, fp):
+		"""
+		Builds GPS Track by parsing all waypoints
+		in .nmea log file
+		"""
 		fd = open(fp,"r")
 		for line in fd:
 			line = line.strip()
 			wp = Waypoint(nmea=line)
-			if (wp.getUTC() != "000000.00"): # success
-				self.waypoints.append(Waypoint(nmea=line))
+			self.waypoints.append(Waypoint(nmea=line))
 		fd.close()
 
 	def GPSTrackKML(self, fp):
+		"""
+		Builds GPS Track by parsing all waypoints
+		in .kml log file
+		"""
 		fd = open(fp,"r")
 		coordinates_found = False
 		for line in fd:
