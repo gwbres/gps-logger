@@ -110,6 +110,13 @@ class GPSTrack:
 		""" Removes given waypoint in track """
 		del self.waypoints[index]
 
+	def __str__(self):
+		string = "--- GPS Track ---"
+		for i in range(0, len(self.waypoints)):
+			string += str(self.waypoints[i])
+		string += "----------------"
+		return string
+
 	def toKML(self, fp):
 		"""
 		Writes GPS track in a KML file
