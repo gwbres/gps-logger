@@ -231,13 +231,19 @@ class GPSTrack:
 			plt.grid(which='both', axis='both')
 			ax = fig.add_subplot(111)
 
-			acc = 0
-			dist = [0]
-			elevation = [float(self.waypoints[0].getAltitude())]
-			for i in range(1, len(self.waypoints)):
-				acc += self.waypoints[i].distance(self.waypoints[i-1])
+			elevation = []
+			for i in range(0, len(self.waypoints)):
 				elevation.append(float(self.waypoints[i].getAltitude()))
-				dist.append(acc)
-			ax.plot(dist, elevation)
-			ax.fill_between(dist, elevation, 0)
+			x = self.totalDistance()
+			ax.plot(x, elevation)
+			ax.fill_between(x, elevation, 0)
 			plt.show()
+
+	def totalDistance(self):
+		"""
+		Returns total distance covert in self
+		"""
+		dist = 0.0
+		for i in range(1, len(self.waypoints)):
+			dist += self.waypoints[i].distance(self.waypoints[i-1])
+		return dist
