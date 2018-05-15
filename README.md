@@ -20,11 +20,19 @@ consumption.
 	* etc.. 
 * Discover NMEA data 
 
-### Examples
+### Example of use
 
-Test 1: first try
+```python
+track = GPSTrack("test.nmea")
+track.drawOnMap() # draws GPS Track on a map using geoplotlib
+```
 
 ![alt text](tests/test1.png)
+
+```python
+track.drawOnMap(elevationProfile=true) # adds optional elevation profile
+```
+
 ![alt text](tests/profile1.png)
 
 ### Getting started
@@ -41,7 +49,7 @@ compile the program with
 make
 ```
 
-### Use mspdebug to flag the program
+### I use mspdebug to flash the program
 
 ```bash
 # mspdebug rf2500
