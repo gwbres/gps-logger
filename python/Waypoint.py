@@ -9,19 +9,22 @@ class Waypoint:
 	optionnal UTC timestamp and altitude.
 	"""
 	
-	def __init__(self, nmea=None, locus=None, latDeg=None, lonDeg=None, utc=None, alt=None):
+	def __init__(self, nmea=None, locus=None, latDeg=None, lonDeg=None, date=None, alt=None):
 		"""
 		Creates a Waypoint object
 		from either: an nmea frame (CSV)
-		or from lat/lon in decimal degrees
-		alt & utc are optionnal
+		or from lat/lon in decimal degrees.
+		alt [m]: optional
+		date: optional
+
+		Object contains latitude & longitude coordinates,
+		a date built from given UTC timestamp or complete date.
 		"""
 
-		self.utc = "000000.00" 
 		self.lat = ["ddmm.ssss","N"]
 		self.lon = ["dddmm.ssss","E"]
 		self.alt = "0" 
-		self.speed = None 
+		self.speed = None
 		
 		if (nmea is not None):
 			content = nmea.split(",")
@@ -32,18 +35,34 @@ class Waypoint:
 
 			if (content[0] == "$GPGGA"):
 				# GGA frame
-				self.utc = content[1]
+				utc = content[1] # hhmmss.ss
+				# day is missing, use today for day
+				today = datetime.date.today()
+				string = "{:d}/{:d}/{:d} ".format(today.day,today.month,today.year)
+				# use utc for time of day
+				string += "{:s}:{:s}:{:s}".format(utc[0:2],utc[2:4],utc[4:6])
+				self.date = datetime.datetime.strptime(string,format)
+				
 				self.lat = [content[2],content[3]]
 				self.lon = [content[4],content[5]]
 				self.alt = content[9]
+
 			elif (content[0] == "$GPRMC"):
 				# RMC frame
-				self.utc = content[1]
 				if (content[2] == 'A'): # 'A':valid (GPS fix), 'V' non valid
+					# combine given UTC & date to build date value
+					utc = content[1] # hhmmss.ss
+					day = content[9] # ddmmyy
+					string = "{:s}/{:s}/{:s} ".format(day[0:2],day[2:4],day[4:6])
+					string += "{:s}:{:s}:{:s}".format(utc[0:2],utc[2:4],utc[4:6])
+					format = "%d/%m/%y %H:%M:%S"
+					self.date = datetime.datetime.strptime(string, format)
+
 					self.lat = [content[3],content[4]]
 					self.lon = [content[5],content[6]]
 					self.speed = self.knotsToKmph(float(content[7]))
-					self.date = content[9] # ddmmyy
+				else:
+					raise ValueError("'V' non valid $GPRMC frame")
 
 			else:
 				raise NameError("Only $GGA & $RMC nmea frames are supported at the moment")
@@ -59,7 +78,7 @@ class Waypoint:
 			b3 = locus[9:13]
 			b4 = locus[13:16]
 
-			date = datetime.datetime.fromtimestamp(self.parseInt32(b0))
+			self.date = datetime.datetime.fromtimestamp(self.parseInt32(b0))
 			
 			latDeg = self.parseFloat32(b2)
 			DMS = self.decimalDegreesToDMS(latDeg)
@@ -123,13 +142,10 @@ class Waypoint:
 	def __str__(self):
 		lat = self.getLatitude()
 		lon = self.getLongitude()
-		string = "UTC: {:s} | ".format(self.utc)
+		string = "Date: {:s} | ".format(self.date)
 		string += "Latitude: {:s}{:s} | ".format(lat[0],lat[1])
 		string += "Longitude: {:s}{:s}\n".format(lon[0],lon[1])
 		return string
-
-	def getUTC(self):
-		return self.utc
 
 	def getLatitude(self):
 		return self.lat
@@ -141,24 +157,7 @@ class Waypoint:
 		return self.alt
 
 	def getDate(self):
-		"""
-		Returns UTC time stamps
-		Date + UTC when possible
-		"""
-		string = ""
-		if (self.date is not None):
-			string += self.date()[0:2]
-			string += '/'+self.date()[2:4]
-			string += '/'+self.date()[4:6]+' '
-			format = "d/m/y H-M-S"
-		else:
-			format = "%H-%M-%S"
-		
-		string += self.utc.split('.')[0][0:2]
-		string += "-"+self.utc.split('.')[0][2:4]
-		string += "-"+self.utc.split('.')[0][4:6]
-
-		return datetime.datetime.strptime(string, format)
+		return self.date
 
 	def toDMS(self):
 		"""
