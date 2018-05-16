@@ -49,55 +49,35 @@ class Waypoint:
 				raise NameError("Only $GGA & $RMC nmea frames are supported at the moment")
 
 		elif (locus is not None):
-			content = locus.split(",")
-			checksum = content[-1].split("*")[-1]
-			expecting = Waypoint.checksum(locus)
-			if (checksum != expecting):
-				print('checksum ',checksum)
-				print('expecting ',expecting)
-				raise ValueError("Checksum is faulty for line {:s}".format(locus))
+			b0 = locus[0:4]
+
+			b1 = locus[4]
+			if (not((b1 > 0) and (b1 < 5))):
+				raise ValueError("Locus/GPS Fix error")
+
+			b2 = locus[5:9]
+			b3 = locus[9:13]
+			b4 = locus[13:16]
+
+			date = datetime.datetime.fromtimestamp(self.parseInt32(b0))
 			
-			if not(locus.startswith("$PMTKLOX,1")):
-				raise NameError("Non valid PMTKLOX/locus")
+			latDeg = self.parseFloat32(b2)
+			DMS = self.decimalDegreesToDMS(latDeg)
+			if (latDeg < 0):
+				EM = "S"
+			else:
+				EM = "N"
+			self.lat = [self.DMStoDDMMSSSS(DMS),EM]
 
-			content = content[3:] # remove header,type,line number
-			content[-1] = content[-1].split('*')[0] # keep payload only
-			Bytes = []
-			for c in content:
-				Bytes.append(self.toByteArray(c))
+			lonDeg = self.parseFloat32(b3)
+			DMS = self.decimalDegreesToDMS(lonDeg)
+			if (lonDeg < 0):
+				EM = "W"
+			else:
+				EM = "E"
+			self.lon = [self.DMStoDDMMSSSS(DMS, isLongitude=True),EM]
 
-			n = 0
-			while (n < len(Bytes)):
-				b = Bytes[n:n+4]
-				b0 = b[0] # 4 bytes
-				b1 = b[1][0] # 1 byte
-				b2 = b[1][1:] # 3 bytes
-				b2.append(b[2][0]) # +1byte=4bytes
-				b3 = b[2][1:] # 3bytes
-				b3.append(b[3][0]) # +1byte=4bytes
-
-				if (b1 != 2): # GPS Fix
-					raise NameError("PMTKLOX/locus cannot be used")
-
-				date = datetime.datetime.fromtimestamp(self.parseInt32(b0))
-				latDeg = self.parseFloat32(b2)
-				DMS = self.decimalDegreesToDMS(latDeg)
-				if (latDeg < 0):
-					EM = "S"
-				else:
-					EM = "N"
-				self.lat = [self.DMStoDDMMSSSS(DMS),EM]
-
-				lonDeg = self.parseFloat32(b3)
-				DMS = self.decimalDegreesToDMS(lonDeg)
-				if (lonDeg < 0):
-					EM = "W"
-				else:
-					EM = "E"
-				self.lon = [self.DMStoDDMMSSSS(DMS, isLongitude=True),EM]
-				self.alt = str(self.parseInt16(b4)) 
-				n += 4
-
+			self.alt = str(self.parseInt16(b4)) 
 
 		else:
 			DMS = self.decimalDegreesToDMS(latDeg)
