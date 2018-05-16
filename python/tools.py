@@ -94,6 +94,10 @@ def main(argv):
 			commands.append("nmea-to-kml")
 		elif flag == "--nmea-to-gpx":
 			commands.append("nmea-to-gpx")
+		elif flag == "--locus-to-kml":
+			commands.append("locus-to-kml")
+		elif flag == "--locus-to-gpx":
+			commands.append("locus-to-gpx")
 
 		# Input file paths
 		elif (flag.split("=")[0] == "--file"):
@@ -279,6 +283,22 @@ def main(argv):
 			GPSTrack(fp).toKML(fp.split('.')[0]+'.kml')
 		
 		elif (command == "nmea-to-gpx"):
+			if (len(files) == 0):
+				fp = input("Set input file path..\n")
+			else:
+				fp = files[0]
+				files = files[1:]
+			GPSTrack(fp).toGPX(fp.split('.')[0]+'.gpx')
+
+		elif (command == "locus-to-kml"):
+			if (len(files) == 0):
+				fp = input("Set input file path..\n")
+			else:
+				fp = files[0]
+				files = files[1:]
+			GPSTrack(fp).toKML(fp.split('.')[0]+'.kml')
+
+		elif (command == "locus-to-gpx"):
 			if (len(files) == 0):
 				fp = input("Set input file path..\n")
 			else:
