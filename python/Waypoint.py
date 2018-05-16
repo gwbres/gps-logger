@@ -123,9 +123,9 @@ class Waypoint:
 	def __str__(self):
 		lat = self.getLatitude()
 		lon = self.getLongitude()
-		string = "UTC: {:s}\n".format(self.utc)
-		string = "Latitude: {:s}{:s}\n".format(lat[0],lat[1])
-		string += "Longitude: {:s}{:s}".format(lon[0],lon[1])
+		string = "UTC: {:s} | ".format(self.utc)
+		string += "Latitude: {:s}{:s} | ".format(lat[0],lat[1])
+		string += "Longitude: {:s}{:s}\n".format(lon[0],lon[1])
 		return string
 
 	def getUTC(self):
