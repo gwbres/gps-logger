@@ -53,7 +53,6 @@ def main(argv):
 		return -1
 
 	commands = []
-	view_profile = None
 	files = []
 	port = None
 
@@ -107,7 +106,7 @@ def main(argv):
 		elif flag == "--view-coordinates":
 			commands.append("viewer")
 		elif flag == "--elevation-profile":
-			view_profile = True
+			commands.append("elevation-profile")
 
 	for command in commands:
 		if (command == "status"):
@@ -312,7 +311,10 @@ def main(argv):
 			else:
 				fp = files[0]
 				files = files[1:]
-			GPSTrack(fp).drawOnMap(elevationProfile=view_profile)
+			GPSTrack(fp).drawOnMap()
+
+		elif (command == "elevation-profile"):
+			GPSTrack(fp).drawElevProfile()
 		
 		elif command == "--help":
 			print_help()

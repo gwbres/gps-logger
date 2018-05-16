@@ -251,22 +251,22 @@ class GPSTrack:
 		# retrieve labels here
 		#geoplotlib.labels(data, "label", color=[0,0,255,255], font_size=10, anchor_x='center')
 		geoplotlib.show()
-		
-		if (elevationProfile):
-			fig = plt.figure(0)
-			plt.subplot(111)
-			plt.xlabel("Overall distance [m]")
-			plt.ylabel("Elevation [m]")
-			plt.grid(which='both', axis='both')
-			ax = fig.add_subplot(111)
 
-			elevation = []
-			for i in range(0, len(self.waypoints)):
-				elevation.append(float(self.waypoints[i].getAltitude()))
-			x = self.totalDistance()
-			ax.plot(x, elevation)
-			ax.fill_between(x, elevation, 0)
-			plt.show()
+	def drawElevProfile(self):
+		fig = plt.figure(0)
+		plt.subplot(111)
+		plt.xlabel("Overall distance [m]")
+		plt.ylabel("Elevation [m]")
+		plt.grid(which='both', axis='both')
+		ax = fig.add_subplot(111)
+
+		elevation = []
+		for i in range(0, len(self.waypoints)):
+			elevation.append(float(self.waypoints[i].getAltitude()))
+		x = self.totalDistance()
+		ax.plot(x, elevation)
+		ax.fill_between(x, elevation, 0)
+		plt.show()
 
 	def totalDistance(self):
 		"""
@@ -305,4 +305,4 @@ class GPSTrack:
 			dt = self.waypoints[i].timeDiff(self.waypoints[i-1]).seconds
 			speed += d/dt 
 
-		return speed/len(self)
+		return speed/len(self.waypoints)
