@@ -306,3 +306,23 @@ class GPSTrack:
 			speed += d/dt 
 
 		return speed/len(self.waypoints)
+
+	def instantSpeed(self, minDt=None, minDist=None):
+		"""
+		Returns instantaneous speed values
+		between all waypoints within track.
+
+		If minDt is specified: instant speed is averaged
+		between waypoints within specified time interval.
+
+		If minDist is specified: instant speed is averaged
+		between waypoints within specified distance range.
+		"""
+		speed = []
+		if ((minDt is None) and (minDist is None)):
+			# straight forward
+			for i in range(1, len(self.waypoints)):
+				d = self.waypoints[i].distance(self.waypoints[i-1])/1000	
+				dt = self.waypoints[i].timeDiff(self.waypoints[i-1]).seconds
+			speed.append(d/dt)
+		return speed
