@@ -79,10 +79,39 @@ class GPSTrack:
 		fd = open(fp,"r")
 		for line in fd:
 			line = line.strip()
-			try:
-				self.waypoints.append(Waypoint(locus=line))
-			except NameError: # missing GPS fix 
-				pass
+
+			if (not(line.startswith("$PMTKLOX,1"))):
+				# non valid locus log
+				continue
+
+			# locus payload parsing
+			content = line.split(",")
+			checksum = content[-1].split("*")[-1]
+			expected = Waypoint.checksum(line)
+			if (checksum != expected):
+				# checksum is faulty, discard this line
+				continue
+			
+			content = content[3:] # remove header, type & line number
+			content[-1] = content[-1].split("*")[0] # remove checksum value
+			
+			# one line in locus contains 6 waypoints
+			# build byte array for this line
+			_bytes = []
+			for c in content:
+				for i in range(0, 4): # 4*2 characters
+					_offset = int(i*2) # slice 2 by 2 characthers (hex format)
+					_bytes.append(int(c[_offset:_offset+2],16))
+
+			N = int(len(content)/4) # number of records for this line
+			for i in range(0,N): 
+				try: 
+					self.waypoints.append(Waypoint(locus=_bytes))
+				except ValueError:
+					# missing GPS fix, discard this one 
+					pass
+
+				_bytes = _bytes[16:] # shift used bytes
 
 		fd.close()
 
