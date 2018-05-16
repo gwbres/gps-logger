@@ -26,7 +26,7 @@ class Waypoint:
 		if (nmea is not None):
 			content = nmea.split(",")
 			checksum = content[-1].split("*")[-1]
-			expecting = self.checksum(nmea)
+			expecting = Waypoint.checksum(nmea)
 			if (checksum != expecting):
 				raise ValueError("Checksum is faulty for line {:s}".format(nmea))
 
@@ -51,7 +51,7 @@ class Waypoint:
 		elif (locus is not None):
 			content = locus.split(",")
 			checksum = content[-1].split("*")[-1]
-			expecting = self.checksum(locus)
+			expecting = Waypoint.checksum(locus)
 			if (checksum != expecting):
 				print('checksum ',checksum)
 				print('expecting ',expecting)
@@ -237,7 +237,8 @@ class Waypoint:
 		a = math.sqrt((math.sin(deltaLat/2))**2+math.cos(lat1rad)*math.cos(lat2rad)*(math.sin(deltaLon/2))**2)
 		return 2*6371000*math.asin(a)
 
-	def checksum(self, line):
+	@classmethod
+	def checksum(cls, line):
 		""" 
 		Evaluates checksum for given nmea/locus line.
 		Returns zero padded hex string.
