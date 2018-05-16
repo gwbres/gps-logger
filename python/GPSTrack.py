@@ -140,7 +140,7 @@ class GPSTrack:
 		del self.waypoints[index]
 
 	def __str__(self):
-		string = "--- GPS Track ---"
+		string = "--- GPS Track ---\n"
 		for i in range(0, len(self.waypoints)):
 			string += str(self.waypoints[i])
 		string += "----------------"
