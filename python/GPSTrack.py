@@ -235,7 +235,7 @@ class GPSTrack:
 			fd.write(line)
 		fd.close()
 
-	def drawOnMap(self, elevationProfile=None):
+	def drawOnMap(self):
 		"""
 		Draws GPS track on map using
 		geoplotlib.
