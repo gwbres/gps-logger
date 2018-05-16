@@ -216,6 +216,13 @@ class Waypoint:
 		a = math.sqrt((math.sin(deltaLat/2))**2+math.cos(lat1rad)*math.cos(lat2rad)*(math.sin(deltaLon/2))**2)
 		return 2*6371000*math.asin(a)
 
+	def timeDiff(self, wp):
+		"""
+		Returns time difference (timedelta object)
+		between two waypoints
+		"""
+		return self.getDate()-wp.getDate()
+
 	@classmethod
 	def checksum(cls, line):
 		""" 
