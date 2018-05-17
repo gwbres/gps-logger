@@ -146,6 +146,27 @@ class GPSTrack:
 		string += "----------------"
 		return string
 
+	def append(self, waypoints):
+		"""
+		Appends waypoint or list of waypoints
+		to self
+		"""
+		self.waypoints.append(waypoints)
+	
+	def prepend(self, waypoints):
+		"""
+		Prepends waypoint or list of waypoints
+		to self
+		"""
+		self.waypoints.insert(0, waypoints)
+
+	def insert(self, index, waypoints):
+		"""
+		Inserts waypoint or list of waypoints
+		at given position
+		"""
+		self.waypoints.insert(index, waypoints)
+
 	def toKML(self, fp):
 		"""
 		Writes GPS track in a KML file
