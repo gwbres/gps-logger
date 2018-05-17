@@ -1,5 +1,7 @@
 from Waypoint import *
 
+ICON_URL = "http://maps.gstatic.com/mapfiles/ridefinder-images/mm_20_gray.png"
+
 class GPSTrack:
 	"""
 	GPS track is a list of GPS waypoints
@@ -255,19 +257,33 @@ class GPSTrack:
 		"""
 		Draws GPS track on map using qMap
 		"""
+		
 		map.setZoom(14)
+		
 		[l0,L0] = self.waypoints[0].toDecimalDegrees()
 		map.centerAt(l0,L0)
+		map.center()
 		
-		[l,L] = self.waypoints[-1].toDecimalDegrees() 
+		[l,L] = self.waypoints[-1].toDecimalDegrees()
 		map.addMarker("Marker", l, L,
 			**dict(
 				icon=ICON_URL,
 				draggable=False,
-				title="Waypoint 1"
+				title="Waypoint {:d}".format(0)
 			)
 		)
-		
+
+		"""
+		for i in range(0, len(self.waypoints)):
+			if ((i%10) == 0):
+				[l,L] = self.waypoints[i].toDecimalDegrees() 
+				map.runScript(
+					"osm_addMarker(key={!r},"
+					"latitude= {}, "
+					"longitude= {},);".format("test",l,L)
+				)
+		"""
+
 		map.waitUntilReady()
 
 	def elevationProfile(self):
