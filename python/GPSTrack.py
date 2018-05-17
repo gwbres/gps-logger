@@ -235,38 +235,33 @@ class GPSTrack:
 			fd.write(line)
 		fd.close()
 
-	def drawOnMap(self):
+	def drawOnMap(self, map):
 		"""
-		Draws GPS track on map using
-		geoplotlib.
-		Elevation profile can optionnaly be viewed using
-		matplotlib.
+		Draws GPS track on map using qMap
 		"""
+		map.setZoom(14)
+		[l0,L0] = self.waypoints[0].toDecimalDegrees()
+		map.centerAt(l0,L0)
 		
-		# use temporary .csv file 
-		# to make it compliant with geoplot lib.
-		self.toCSV("/tmp/tmp.csv")
-		data = read_csv("/tmp/tmp.csv")
-		geoplotlib.dot(data, point_size=4)
-		# retrieve labels here
-		#geoplotlib.labels(data, "label", color=[0,0,255,255], font_size=10, anchor_x='center')
-		geoplotlib.show()
+		[l,L] = self.waypoints[-1].toDecimalDegrees() 
+		map.addMarker("Marker", l, L,
+			**dict(
+				icon=ICON_URL,
+				draggable=False,
+				title="Waypoint 1"
+			)
+		)
+		
+		map.waitUntilReady()
 
-	def drawElevProfile(self):
-		fig = plt.figure(0)
-		plt.subplot(111)
-		plt.xlabel("Overall distance [m]")
-		plt.ylabel("Elevation [m]")
-		plt.grid(which='both', axis='both')
-		ax = fig.add_subplot(111)
-
+	def elevationProfile(self):
+		"""
+		Returns all waypoints altitude
+		"""
 		elevation = []
 		for i in range(0, len(self.waypoints)):
 			elevation.append(float(self.waypoints[i].getAltitude()))
-		x = self.totalDistance()
-		ax.plot(x, elevation)
-		ax.fill_between(x, elevation, 0)
-		plt.show()
+		return elevation
 
 	def totalDistance(self):
 		"""
