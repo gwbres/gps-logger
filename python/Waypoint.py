@@ -115,6 +115,11 @@ class Waypoint:
 
 			if (alt is not None):
 				self.alt = alt
+			
+			if (date is None): # use now()
+				self.date = datetime.date.today()
+			else:
+				self.date = date
 
 	def decimalDegreesToDMS(self, deg):
 		""" Converts decimal degrees to D°M'S" """
@@ -142,7 +147,7 @@ class Waypoint:
 	def __str__(self):
 		lat = self.getLatitude()
 		lon = self.getLongitude()
-		string = "Date: {:s} | ".format(self.date)
+		string = "Date: {:s} | ".format(str(self.date))
 		string += "Latitude: {:s}{:s} | ".format(lat[0],lat[1])
 		string += "Longitude: {:s}{:s}\n".format(lon[0],lon[1])
 		return string
