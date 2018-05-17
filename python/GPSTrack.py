@@ -321,3 +321,16 @@ class GPSTrack:
 				dt = self.waypoints[i].timeDiff(self.waypoints[i-1]).seconds
 				speed.append(d/dt)
 		return speed
+	
+	def accumulatedDistance(self):
+		"""
+		Returns accumulated distance
+		along the whole track
+		"""
+		x = []
+		acc = 0.0
+		x.append(0.0)
+		for i in range(1, len(self.waypoints)):
+			acc += self.waypoints[i].distance(self.waypoints[i-1])
+			x.append(acc)
+		return x
