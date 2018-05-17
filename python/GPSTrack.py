@@ -1,10 +1,5 @@
 from Waypoint import *
 
-import geoplotlib
-from geoplotlib.utils import read_csv
-
-import matplotlib.pyplot as plt
-
 class GPSTrack:
 	"""
 	GPS track is a list of GPS waypoints
