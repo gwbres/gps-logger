@@ -319,5 +319,5 @@ class GPSTrack:
 			for i in range(1, len(self.waypoints)):
 				d = self.waypoints[i].distance(self.waypoints[i-1])/1000	
 				dt = self.waypoints[i].timeDiff(self.waypoints[i-1]).seconds
-			speed.append(d/dt)
+				speed.append(d/dt)
 		return speed
