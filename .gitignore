@@ -1,5 +1,8 @@
 *.elf
+
 *.nmea
 *.kml
+*.locus
 *.gpx
+
 PCB/*
