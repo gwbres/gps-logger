@@ -170,7 +170,7 @@ class MainWindow (QMainWindow):
 		track.drawOnMap(self.map)
 
 		# instant speed
-		self.plots[1].plot(track.instantSpeed(),symbol='o')
+		self.plots[1].plot(track.instantSpeed())
 
 		# accumulated distance
 		self.plots[2].plot(track.accumulatedDistance())
