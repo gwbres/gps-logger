@@ -256,34 +256,27 @@ class GPSTrack:
 	def drawOnMap(self, map):
 		"""
 		Draws GPS track on map using qMap
+		TODO:
+			+ zoom: should be based on totalDistance()
 		"""
 		
 		map.setZoom(14)
 		
 		[l0,L0] = self.waypoints[0].toDecimalDegrees()
 		map.centerAt(l0,L0)
-		map.center()
 		
-		[l,L] = self.waypoints[-1].toDecimalDegrees()
-		map.addMarker("Marker", l, L,
-			**dict(
-				icon=ICON_URL,
-				draggable=False,
-				title="Waypoint {:d}".format(0)
-			)
-		)
-
-		"""
 		for i in range(0, len(self.waypoints)):
 			if ((i%10) == 0):
-				[l,L] = self.waypoints[i].toDecimalDegrees() 
-				map.runScript(
-					"osm_addMarker(key={!r},"
-					"latitude= {}, "
-					"longitude= {},);".format("test",l,L)
+				[l,L] = self.waypoints[i].toDecimalDegrees()
+				map.addMarker("Marker", l, L,
+					**dict(
+						icon=ICON_URL,
+						draggable=False,
+						title="Waypoint {:d}".format(i)
+					)
 				)
-		"""
 
+		map.center()
 		map.waitUntilReady()
 
 	def elevationProfile(self):
