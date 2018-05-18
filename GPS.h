@@ -51,6 +51,10 @@ void GPS_erase_flash(void);
 // rate: [PMTK_FIX_RATE_100mhz;_200mhz;_5hz;_1hz;_2hz;_10hz]
 void GPS_set_fixblink_rate(int rate);
 
+// parses & returns current flash usage
+// from requested status
+int GPS_flash_usage(char *status);
+
 // controls PMTK module NMEA framing
 // output: PMTK_NMEA_OFF: no frames to be output
 // output: PMTK_NMEA_RMC_ONLY: only RMC frames

@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdlib.h>
 #include <msp430g2553.h>
 #include "GPS.h"
 
@@ -94,4 +95,22 @@ void GPS_wake_up(void){
 	UC0IE |= UCA0TXIE;
 	while (UCA0STAT & UCBUSY);
 	__delay_cycles(16383); // give module some time
+}
+
+int GPS_flash_usage(char *status){
+	int _offset;
+	char *token;
+	char usage[3]; // up to 3 digit number
+	token = strtok(status, "*"); // retrieve till end of payload
+	// locate last item
+	if (token[strlen(token)-2] == ',') // 1 digit
+		_offset = strlen(token)-2;
+	else if (token[strlen(token)-3] == ',') // 2 digits
+		_offset = strlen(token)-3;
+	else if (token[strlen(token)-4] == ',') // 3 digits
+		_offset = strlen(token)-3;
+	else if (token[strlen(token)-4] == ',') // 3 digits
+		_offset = strlen(token)-4;
+	strcpy(usage, token+_offset);
+	return atoi(usage);
 }
