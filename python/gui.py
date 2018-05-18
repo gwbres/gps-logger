@@ -96,11 +96,6 @@ class MainWindow (QMainWindow):
 		p3.showGrid(x=True,y=True)
 		self.plots.append(p3)
 
-		# track viewer
-		p4 = pg.PlotWidget(title="Test")
-		p4.enableAutoRange()
-		self.plots.append(p4)
-    	
 		"""
 		map.mapMoved.connect(onMapMoved)
     	map.markerMoved.connect(onMarkerMoved)
@@ -139,10 +134,6 @@ class MainWindow (QMainWindow):
 		d2 = Dock("Elevation profile", size=(1,1))
 		d2.addWidget(p2)
 		docks.addDock(d2)
-
-		d3 = Dock("Track", size=(1,1))
-		d3.addWidget(p4)
-		docks.addDock(d3)
 
 		self.setCentralWidget(docks)
 		self.resize(WIN_WIDTH,WIN_HEIGHT)
@@ -191,19 +182,6 @@ class MainWindow (QMainWindow):
 		brush = (100,100,255)
 		self.elevFill = pg.FillBetweenItem(c1,c2,brush)
 		self.plots[0].addItem(self.elevFill)
-
-		# track viewer
-		self.plots[3].plot([0,0],[0,1])
-		self.plots[3].plot([100,100],[0,1])
-		l1 = pg.InfiniteLine(pos=0,angle=90,movable=True)
-		l2 = pg.InfiniteLine(pos=100,angle=90,movable=True)
-		c1 = self.plots[3].getPlotItem().curves[0]
-		c2 = self.plots[3].getPlotItem().curves[1]
-		brush = (100,100,255)
-		fill = pg.FillBetweenItem(c1,c2,brush)
-		self.plots[3].addItem(l1)
-		self.plots[3].addItem(l2)
-		self.plots[3].addItem(fill)
 
 	def clear(self):
 		"""
