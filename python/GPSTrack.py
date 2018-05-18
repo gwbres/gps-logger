@@ -143,6 +143,12 @@ class GPSTrack:
 		string += "----------------"
 		return string
 
+	def getWaypoints(self):
+		"""
+		Returns all waypoints contained in track
+		"""
+		return self.waypoints
+
 	def append(self, waypoints):
 		"""
 		Appends waypoint or list of waypoints
@@ -262,9 +268,6 @@ class GPSTrack:
 		
 		map.setZoom(14)
 		
-		[l0,L0] = self.waypoints[0].toDecimalDegrees()
-		map.centerAt(l0,L0)
-		
 		for i in range(0, len(self.waypoints)):
 			if ((i%10) == 0):
 				[l,L] = self.waypoints[i].toDecimalDegrees()
@@ -276,6 +279,8 @@ class GPSTrack:
 					)
 				)
 
+		[l0,L0] = self.waypoints[0].toDecimalDegrees()
+		map.centerAt(l0,L0)
 		map.center()
 		map.waitUntilReady()
 
