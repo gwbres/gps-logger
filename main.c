@@ -64,7 +64,8 @@ int main(int argc, char **argv){
 			GPS_start_logging();
 			wait_for_answer();
 			_user_action &= 0x00;
-			_BIS_SR(GIE|P1IE|LPM0_bits); // hibernate
+			while(debouncing);
+			_BIS_SR(GIE|P1IE|LPM3_bits); // hibernate
 		} 
 		/*else if (_user_action & 0x02){
 			GPS_stop_logging();
@@ -93,7 +94,7 @@ void init_platform(void){
 
 	_BIS_SR(GIE|P1IE);
 	GPS_NMEA_output(PMTK_NMEA_OFF); // reduces power drawn by module
-	_BIS_SR(GIE|P1IE|LPM0_bits); // hibernate
+	_BIS_SR(GIE|P1IE|LPM3_bits); // hibernate
 }
 
 void init_timers(void){
@@ -169,7 +170,7 @@ __interrupt void P2_ISR(void){
 		debounce_cnt &= 0;
 		debouncing |= 0x01;
 		P2OUT ^= LED;
-		__bic_SR_register_on_exit(LPM0_bits);
+		__bic_SR_register_on_exit(LPM3_bits);
 
 		if (P2IFG & START_BTN)
 			_user_action |= 0x01;
