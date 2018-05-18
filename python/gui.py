@@ -2,6 +2,10 @@
 
 import sys
 
+# Dimensions
+WIN_WIDTH = 800 # px
+WIN_HEIGHT = 500 # px
+
 # Qt5
 from PyQt5.QtCore import Qt
 from PyQt5.QtWebKit import * 
@@ -21,6 +25,7 @@ import pyqtgraph.console
 import numpy as np
 
 # API
+from PMTK import *
 from GPSTrack import *
 from Waypoint import *
 
@@ -53,7 +58,6 @@ class MainWindow (QMainWindow):
 		action.setShortcut("ALT+F4")
 		action.triggered.connect(self.exit)
 		fileMenu.addAction(action)
-		
 		
 		# map
 		mapWidget = QWidget()
@@ -91,6 +95,11 @@ class MainWindow (QMainWindow):
 		p3Item.setLabel('bottom', 'GPS Waypoint')
 		p3.showGrid(x=True,y=True)
 		self.plots.append(p3)
+
+		# track viewer
+		p4 = pg.PlotWidget(title="Test")
+		p4.enableAutoRange()
+		self.plots.append(p4)
     	
 		"""
 		map.mapMoved.connect(onMapMoved)
@@ -131,8 +140,12 @@ class MainWindow (QMainWindow):
 		d2.addWidget(p2)
 		docks.addDock(d2)
 
+		d3 = Dock("Track", size=(1,1))
+		d3.addWidget(p4)
+		docks.addDock(d3)
+
 		self.setCentralWidget(docks)
-		self.resize(500,500)
+		self.resize(WIN_WIDTH,WIN_HEIGHT)
 		self.show()
 
 	def open(self):
@@ -148,6 +161,8 @@ class MainWindow (QMainWindow):
 	def openDialogConfirmed(self, confirmed):
 		"""
 		Called when file dialog has been confirmed
+		TODO:
+			+ handle list of files
 		"""
 		if not(confirmed):
 			return 0
@@ -159,14 +174,6 @@ class MainWindow (QMainWindow):
 
 		# visualize track on map
 		track.drawOnMap(self.map)
-
-		# Useful: c = self.map.center()
-		# Many icons at: https://sites.google.com/site/gmapsdevelopment/
-		"""
-    	w.show()
-
-    	map.waitUntilReady()
-		"""
 
 		# instant speed
 		self.plots[1].plot(track.instantSpeed(),symbol='o')
@@ -184,6 +191,19 @@ class MainWindow (QMainWindow):
 		brush = (100,100,255)
 		self.elevFill = pg.FillBetweenItem(c1,c2,brush)
 		self.plots[0].addItem(self.elevFill)
+
+		# track viewer
+		self.plots[3].plot([0,0],[0,1])
+		self.plots[3].plot([100,100],[0,1])
+		l1 = pg.InfiniteLine(pos=0,angle=90,movable=True)
+		l2 = pg.InfiniteLine(pos=100,angle=90,movable=True)
+		c1 = self.plots[3].getPlotItem().curves[0]
+		c2 = self.plots[3].getPlotItem().curves[1]
+		brush = (100,100,255)
+		fill = pg.FillBetweenItem(c1,c2,brush)
+		self.plots[3].addItem(l1)
+		self.plots[3].addItem(l2)
+		self.plots[3].addItem(fill)
 
 	def clear(self):
 		"""
