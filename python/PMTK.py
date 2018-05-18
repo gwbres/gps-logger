@@ -1,12 +1,5 @@
-import sys
 import time
-import math
 import serial
-import datetime
-import matplotlib.pyplot as plt
-
-import geoplotlib
-from geoplotlib.utils import read_csv
 
 # PMTK module
 PMTK_SET_NMEA_UPDATE_100_MILLIHERTZ = "$PMTK220,10000*2F\r\n"
@@ -32,7 +25,7 @@ PMTK_SET_NMEA_OUTPUT_OFF = "$PMTK314,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28\r\
 
 PMTK_START_LOG = "$PMTK185,0*22\r\n"
 PMTK_STOP_LOG = "$PMTK185,1*23\r\n"
-PMTK_QUERY_STATUS = "$PMTK183*38\r\n"
+PMTK_STATUS_QUERY = "$PMTK183*38\r\n"
 PMTK_DUMP_FLASH = "$PMTK622,1*29\r\n"
 PMTK_ERASE_FLASH = "$PMTK184,1*22\r\n"
 
@@ -51,24 +44,195 @@ PMTK_Q_RELEASE = "$PMTK605*31\r\n"
 PGCMD_ANTENNA = "$PGCMD,33,1*6C\r\n"
 PGCMD_NOANTENNA = "$PGCMD,33,0*6D\r\n"
 
-def write_cmd(tty, cmd):
-	tty.write(bytes(cmd+"\n",encoding="utf-8"))
-	time.sleep(1)
-	return tty.readline().decode("utf-8")
+class PMTK:
 
-# opens serial port
-def open_serial(tty, baudrate):
-	ser = serial.Serial(tty)
-	ser.baudrate = baudrate
-	ser.flushInput()
-	ser.flushOutput()
-	# setup
-	ser.bytesize = serial.EIGHTBITS
-	ser.parity = serial.PARITY_NONE
-	ser.stopbits = serial.STOPBITS_ONE
-	ser.timeout = 0
-	ser.xonxoff = 0
-	ser.rtscts = False
-	ser.dsrdtr = False
-	ser.writeTimeout = 2
-	return ser
+	def __init__(self, dev):
+		self.serial = self.openSerial(dev, 9600)
+
+	def status(self):
+		"""
+		Returns GPS module status
+		"""
+		status = self.sendCommand(PMTK_STATUS_QUERY)
+		string = "Status:\n"
+		string += "SN {:s}\n".format(answer.split(",")[1])
+			
+		logType = int(answer.split(",")[2])
+		string += "Log type: "
+		if (logType == 0):
+			string += "locus overlap\n"
+		else:
+			string += "locus fullstop\n"
+
+		try:
+			logMode = int(answer.split(',')[3])
+		except ValueError:
+			logMode = int(answer.split(',')[3],16)
+
+		string += "locus mode:"
+		if (logMode & 0x1):
+			string += " AlwaysLocate"
+		if (logMode & 0x2):
+			string += " FixOnly"
+		if (logMode & 0x4):
+			string += " Normal"
+		if (logMode & 0x8):
+			string += " Interval"
+		if (logMode & 0x10):
+			string += " Distance"
+		if (logMode & 0x20):
+			string += " Speed"
+		string += "\n"
+
+		string += 'locus content: {:d}\n'.format(int(answer.split(',')[4]))
+		string += 'locus interval: {:d} [s]\n'.format(int(answer.split(',')[5]))
+		string += 'locus distance: {:d} [m]\n'.format(int(answer.split(',')[6]))
+		string += 'locus speed: {:d} [m/s]\n'.format(int(answer.split(',')[7]))
+		string += 'locus logging: {:d}\n'.format(not(bool(answer.split(',')[8])))
+		string += "Data records: {:s}\n".format(answer.split(',')[9])
+		string += "{:s}% flash used:\n".format(answer.split(",")[10].split("*")[0])
+		return string
+
+	def startLogger(self):
+		"""
+		Starts built in locus logger
+		"""
+		answer = self.sendCommand(PMTK_START_LOG)
+		if (answer == "$PMTK001,185,3*3C"):
+			print("Locus logger has been started")
+		else:
+			print("Error: {:s}".format(answer))
+			
+	def stopLogger(self):
+		print("answer: {:s}".format(self.serial.sendCommand(PMTK_STOP_LOG)))
+	
+	def dumpFlash(self, fp):
+		"""
+		Dumps internal flash content
+		into desired file
+		"""
+		print("Turning NMEA off..\n")
+		self.sendCommand(PMTK_SET_NMEA_OUTPUT_OFF)
+		print("Dumping flash content..\n")
+		self.sendCommand(PMTK_DUMP_FLASH)
+
+		fd = open(fp, "w")
+		while (True):
+			try:
+				locus = self.serial.readline().decode("utf-8")
+				print(locus)
+				fd.write(locus+"\n")
+			except SerialTimeout:
+				break
+		fd.close()
+
+	def eraseFlash(self):
+		"""
+		Erases internal flash content
+		"""
+		c = input("About to erase flash content.. are you sure? [Y/N]")
+		if (c == "Y"):
+			answer = self.sendCommand(PMTK_ERASE_FLASH).strip()
+			if (answer == "$PMTK001,184,3*3D"):
+				print("Flash has been erased")
+			else:
+				print("Error")
+		else:
+			print("Aborting")
+	
+	def setLocusRate(self, rate):
+		if (not(rate in ["1s","5s","15s"])):
+			print("Rate {:s} is not supported".format(rate))
+			print("Aborting..")
+		else:
+			if rate == "1s":
+				cmd = PMTK_LOCUS_1_SECONDS 
+			elif rate == "5s":
+				cmd = PMTK_LOCUS_5_SECONDS 
+			elif rate == "15s":
+				cmd = PMTK_LOCUS_15_SECONDS 
+			print(self.sendCommand(cmd).strip())
+	
+	def setNMEAMode(self, output):
+		"""
+		Sets type of NMEA frames
+		to be output by GPS module
+		"""
+		if not(output in ["RMC","RMC-GGA","ALL","OFF"]):
+			print("NMEA mode {:s} is not valid".format(output))
+		else:
+			if output == "RMC":
+				cmd = PMTK_SET_NMEA_OUTPUT_RMC_ONLY
+			elif output == "RMC-GGA":
+				cmd = PMTK_SET_NMEA_OUTPUT_RMC_GGA
+			elif output == "OFF":
+				cmd = PMTK_SET_NMEA_OUTPUT_OFF
+			else:
+				cmd = PMTK_SET_NMEA_OUTPUT_ALL_DATA
+
+			answer = self.sendCommand(cmd)
+			if (answer == "$PMTK001,314,3*36"):
+				print("NMEA mode set to {:s}".format(output))
+			else:
+				print("Error: {:s}".format(answer))
+
+	def setNMEARate(self, rate):
+		if (rate == "100mHz"):
+			cmd = PMTK_SET_NMEA_UPDATE_100_MILLIHERTZ
+		elif (rate == "200mHz"):
+			cmd = PMTK_SET_NMEA_UPDATE_200_MILLIHERTZ
+		elif (rate == "1Hz"):
+			cmd = PMTK_SET_NMEA_UPDATE_1HZ
+		elif (rate == "2Hz"):
+			cmd = PMTK_SET_NMEA_UPDATE_2HZ
+		elif (rate == "5Hz"):
+			cmd = PMTK_SET_NMEA_UPDATE_5HZ
+		elif (rate == "10Hz"):
+			cmd = PMTK_SET_NMEA_UPDATE_10HZ
+		else:
+			cmd = PMTK_SET_NMEA_UPDATE_1HZ
+			print("Rate {:s} is not supported".format(rate))
+			print("Switching back to 1 Hz default rate")
+			
+		answer = self.sendCommand(cmd).strip()
+		if (answer == "$PMTK001,220,3*30"):
+			print("Success")
+		else:
+			print("Error: {:s}".format(answer))
+
+	def getFixBlinkRate(self, rate):
+		"""
+		Returns current LED fix blinking rate
+		"""
+		print(self.sendCommand(PMTK_API_Q_FIX_CTRL).strip())
+	
+	def sendCommand(self, cmd):
+		"""
+		Sends command over serial port
+		and returns answer
+		"""
+		self.serial.write(bytes(cmd+"\n",encoding="utf-8"))
+		time.sleep(1)
+		return tty.readline().decode("utf-8").strip()
+
+	def openSerial(self, tty, baudrate):
+		"""
+		Opens a serial port
+		for 8N1 UART communication
+		at specified baud rate
+		"""
+		ser = serial.Serial(tty)
+		ser.baudrate = baudrate
+		ser.flushInput()
+		ser.flushOutput()
+		# 8N1
+		ser.bytesize = serial.EIGHTBITS
+		ser.parity = serial.PARITY_NONE
+		ser.stopbits = serial.STOPBITS_ONE
+		ser.timeout = 0
+		ser.xonxoff = 0
+		ser.rtscts = False
+		ser.dsrdtr = False
+		ser.writeTimeout = 2
+		ser.readTimeout = 2
+		return ser
