@@ -23,9 +23,14 @@
 #include <string.h>
 #include <msp430g2553.h>
 
-#define LED				BIT0 // P1
-#define RXD				BIT1 // P1 UART: Rx
-#define TXD				BIT2 // P1 UART: Tx
+// P1
+#define RXD 			BIT1
+#define TXD 			BIT2
+// P2
+#define START_BTN		BIT2
+#define STOP_BTN		BIT1
+#define ERASE_BTN		BIT0
+#define LED 			BIT3
 
 #define BUFSIZE	128
 volatile int tx_ptr;
@@ -34,11 +39,7 @@ char tx_buf[BUFSIZE];
 
 volatile char rx_done;
 
-#define START_BTN		BIT0 // P2
-#define STOP_BTN		BIT1 // P2
-#define ERASE_BTN		BIT2 // P2
-
-volatile uint8_t _pending;
+volatile uint8_t _user_action;
 volatile uint8_t debouncing;
 volatile int debounce_cnt;
 #define DEBOUNCE_CNT_MAX	1024
@@ -56,59 +57,43 @@ void wait_for_answer(void);
 
 int main(int argc, char **argv){
 	init_platform();
-	GPS_NMEA_output(PMTK_NMEA_OFF); // save power
 
 	while(1){
-		if (_pending & 0x01){
-			GPS_wake_up();
-			GPS_NMEA_output(PMTK_NMEA_OFF); 
-			wait_for_answer();
+		if (_user_action & 0x01){
+			// P2OUT |= GPS_EN;
 			GPS_start_logging();
 			wait_for_answer();
-			_pending &= 0x00;
-
-		} else if (_pending & 0x02){
+			_user_action &= 0x00;
+			_BIS_SR(GIE|P1IE|LPM0_bits); // hibernate
+		} 
+		/*else if (_user_action & 0x02){
 			GPS_stop_logging();
 			wait_for_answer();
-			GPS_NMEA_output(PMTK_NMEA_OFF);
-			wait_for_answer();
-			GPS_stand_by(); // hibernate from now on 
-			wait_for_answer();
-			_pending &= 0x00;
+			// P2OUT &= ~GPS_EN;
+			_user_action &= 0x00;
 
-		} else if (_pending & 0x04){
+		} else if (_user_action & 0x04){
 			GPS_erase_flash();
 			wait_for_answer();
-			_pending &= 0x00;
-		}
+			_user_action &= 0x00;
+		}*/
 	}
 	return 0;
 }
 
 void init_platform(void){
-	uint16_t _mask = 0;
-
 	if (CALBC1_1MHZ == 0xff || CALDCO_1MHZ == 0xff){while(1);}
 	BCSCTL1 = CALBC1_1MHZ;
 	DCOCTL = CALDCO_1MHZ;
-
-#ifndef LOW_POWER
 	WDTCTL = WDTPW + WDTHOLD;
-#else
-	WDTCTL = WDT_MDLY_32;
-#endif
 
 	init_gpio();
 	init_timers();
 	init_uart();
 
-	_mask |= GIE;
-	_mask |= P1IE;
-#ifdef LOW_POWER
-	wdcnt = 0;
-	_mask |= LPM0_bits;
-#endif
-	_BIS_SR(_mask); 
+	_BIS_SR(GIE|P1IE);
+	GPS_NMEA_output(PMTK_NMEA_OFF); // reduces power drawn by module
+	_BIS_SR(GIE|P1IE|LPM0_bits); // hibernate
 }
 
 void init_timers(void){
@@ -123,20 +108,22 @@ void init_timers(void){
 }
 
 void init_gpio(void){
-	P1DIR |= LED;
 	P1DIR |= RXD+TXD;
 	P1SEL |= RXD+TXD; // USCI requires 
 	P1SEL2 |= RXD+TXD; // special opmode
 	P1OUT &= 0x00;
 
-	P2OUT &= 0x00; 
+	//P2DIR |= GPS_EN;
+	// P2OUT |= GPS_EN;
+	P2DIR |= LED;
+	P2OUT &= 0x00;
 	P2IE |= START_BTN+STOP_BTN+ERASE_BTN; // enable required ISR
 	// clear related flags
 	P2IFG &= ~START_BTN; 
 	P2IFG &= ~STOP_BTN;
 	P2IFG &= ~ERASE_BTN;
 	// initialize
-	_pending &= 0x00;
+	_user_action &= 0x00;
 	debounce_cnt = 0;
 	debouncing &= 0x00;
 }
@@ -147,19 +134,19 @@ void init_uart(void){
 	UCA0BR1 = 0x00; // 115200b/s @1M
 	UCA0MCTL = UCBRS2 + UCBRS0; // 5% modulation
 	UCA0CTL1 &= ~UCSWRST;
-	// disable ISR at the moment
+	// disable ISR 
 	UC0IE &= ~UCA0TXIE;
 	UC0IE &= ~UCA0RXIE;
 	rx_done &= 0x00;
 }
 
 void wait_for_answer(void){
-/* TODO should wait proper answer
+/* TODO should wait proper answer 
 	rx_done &= 0x00;
 	UC0IE |= UCA0RXIE;
 	while (!rx_done);
 */
-	__delay_cycles(0xfffff);
+	__delay_cycles(0xffff);
 }
 
 #pragma vector = TIMER0_A0_VECTOR
@@ -167,7 +154,7 @@ __interrupt void CCR0_ISR(void){
 	if (debouncing){
 		if (debounce_cnt < DEBOUNCE_CNT_MAX-1){
 			debounce_cnt++;
-			P1OUT ^= LED;
+			P2OUT ^= LED;
 		} else {
 			debounce_cnt &= 0;
 			debouncing &= 0x00;
@@ -180,21 +167,18 @@ __interrupt void CCR0_ISR(void){
 __interrupt void P2_ISR(void){
 	if (!debouncing){ 
 		debounce_cnt &= 0;
-		P1OUT ^= LED;
 		debouncing |= 0x01;
+		P2OUT ^= LED;
+		__bic_SR_register_on_exit(LPM0_bits);
 
 		if (P2IFG & START_BTN)
-			_pending |= 0x01;
+			_user_action |= 0x01;
 		else if (P2IFG & STOP_BTN)
-			_pending |= (0x01<<1);
+			_user_action |= (0x01<<1);
 		else if (P2IFG & ERASE_BTN)
-			_pending |= (0x01<<2);
+			_user_action |= (0x01<<2);
 	}
 	
-#ifdef LOW_POWER
-	__bic_SR_register_on_exit(CPUOFF);
-	WDTCTL = WDTPW + WDTHOLD;
-#endif
 	// clear flag
 	if (P2IFG & START_BTN) P2IFG &= ~START_BTN;
 	if (P2IFG & STOP_BTN) P2IFG &= ~STOP_BTN;
@@ -216,15 +200,3 @@ __interrupt void USCI0RX_ISR(void){
 		UC0IE &= ~UCA0RXIE; // we're done
 	} 
 }
-
-#ifdef LOW_POWER
-#pragma vector = WDT_VECTOR
-__interrupt void watchdog_timer(void){
-	if (wdcnt == WDT_NO_ACT-1){
-		_BIS_SR(LPM0_bits + GIE); // LPM3 hibernation from now on
-		WDTCTL = WDTPW + WDTHOLD; // kill WDT
-		wdcnt = 0;
-	} else
-		wdcnt ++;
-}
-#endif
