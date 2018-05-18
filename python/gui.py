@@ -158,8 +158,11 @@ class MainWindow (QMainWindow):
 		if not(confirmed):
 			return 0
 
-		fp = self.qdialog.selectedFiles()[0]
-		track = GPSTrack(fp)
+		files = self.qdialog.selectedFiles()
+		track = GPSTrack(files[0])
+		for fp in files[1:]:
+			t = GPSTrack(fp)
+			track.append(GPSTrack(fp).getWaypoints())
 		
 		self.clear() # clear previous plots
 
