@@ -55,9 +55,9 @@ class PMTK:
 		"""
 		status = self.sendCommand(PMTK_STATUS_QUERY)
 		string = "Status:\n"
-		string += "SN {:s}\n".format(answer.split(",")[1])
+		string += "SN {:s}\n".format(status.split(",")[1])
 			
-		logType = int(answer.split(",")[2])
+		logType = int(status.split(",")[2])
 		string += "Log type: "
 		if (logType == 0):
 			string += "locus overlap\n"
@@ -65,9 +65,9 @@ class PMTK:
 			string += "locus fullstop\n"
 
 		try:
-			logMode = int(answer.split(',')[3])
+			logMode = int(status.split(',')[3])
 		except ValueError:
-			logMode = int(answer.split(',')[3],16)
+			logMode = int(status.split(',')[3],16)
 
 		string += "locus mode:"
 		if (logMode & 0x1):
@@ -84,13 +84,13 @@ class PMTK:
 			string += " Speed"
 		string += "\n"
 
-		string += 'locus content: {:d}\n'.format(int(answer.split(',')[4]))
-		string += 'locus interval: {:d} [s]\n'.format(int(answer.split(',')[5]))
-		string += 'locus distance: {:d} [m]\n'.format(int(answer.split(',')[6]))
-		string += 'locus speed: {:d} [m/s]\n'.format(int(answer.split(',')[7]))
-		string += 'locus logging: {:d}\n'.format(not(bool(answer.split(',')[8])))
-		string += "Data records: {:s}\n".format(answer.split(',')[9])
-		string += "{:s}% flash used:\n".format(answer.split(",")[10].split("*")[0])
+		string += 'locus content: {:d}\n'.format(int(status.split(',')[4]))
+		string += 'locus interval: {:d} [s]\n'.format(int(status.split(',')[5]))
+		string += 'locus distance: {:d} [m]\n'.format(int(status.split(',')[6]))
+		string += 'locus speed: {:d} [m/s]\n'.format(int(status.split(',')[7]))
+		string += 'locus logging: {:d}\n'.format(not(bool(status.split(',')[8])))
+		string += "Data records: {:s}\n".format(status.split(',')[9])
+		string += "{:s}% flash used:\n".format(status.split(",")[10].split("*")[0])
 		return string
 
 	def startLogger(self):
@@ -213,7 +213,7 @@ class PMTK:
 		"""
 		self.serial.write(bytes(cmd+"\n",encoding="utf-8"))
 		time.sleep(1)
-		return tty.readline().decode("utf-8").strip()
+		return self.serial.readline().decode("utf-8").strip()
 
 	def openSerial(self, tty, baudrate):
 		"""
