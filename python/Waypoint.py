@@ -41,6 +41,7 @@ class Waypoint:
 				string = "{:d}/{:d}/{:d} ".format(today.day,today.month,today.year)
 				# use utc for time of day
 				string += "{:s}:{:s}:{:s}".format(utc[0:2],utc[2:4],utc[4:6])
+				format = "%d/%m/%y %H:%M:%S"
 				self.date = datetime.datetime.strptime(string,format)
 				
 				self.lat = [content[2],content[3]]
