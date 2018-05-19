@@ -63,6 +63,7 @@ class MainWindow (QMainWindow):
 		# map
 		mapWidget = QWidget()
 		self.map = QOSM(mapWidget)
+		self.focused = None
 
 		# plots
 		self.plots = []
@@ -235,7 +236,42 @@ class MainWindow (QMainWindow):
 		format = '%Y-%m-%d %H:%M:%S'
 		date = datetime.datetime.strptime(string,format)
 		index = self.track.searchByDate(date)
-		print(index)
+		[l, L] = self.track[index].toDecimalDegrees()
+		
+		# add red marker where focused
+		self.map.deleteMarker('current')
+
+		self.map.addMarker('current', l, L, 
+			**dict(
+				icon="http://maps.gstatic.com/mapfiles/ridefinder-images/mm_20_red.png",
+				draggable=False,
+				title="focus"
+			)
+		)
+
+		# add point on elevation profile where we're at
+		elevationProfile = self.plots[0].getPlotItem()
+		curves = elevationProfile.curves
+		if (len(curves) > 2):
+			curves[-1].clear() # rm previous point
+			del curves[-1]
+
+		[xp,yp] = curves[0].getData()
+		self.plots[0].plot([xp[index]],[yp[index]],symbol='o')
+
+		if (self.focused is not None):
+			self.map.deleteMarker('previous')
+
+			[l, L] = self.focused.toDecimalDegrees()
+			self.map.addMarker('previous', l, L,
+				**dict(
+					icon="http://maps.gstatic.com/mapfiles/ridefinder-images/mm_20_yellow.png",
+					draggable=False,
+					title="previous"
+				)
+			)
+		
+		self.focused = self.track[index] 
 
 	def close(self):
 		print("tut")
