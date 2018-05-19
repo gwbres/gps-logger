@@ -270,7 +270,7 @@ class GPSTrack:
 		
 		for i in range(0, len(self.waypoints)):
 			[l,L] = self.waypoints[i].toDecimalDegrees()
-			map.addMarker("Marker", l, L,
+			map.addMarker("{:d}".format(i), l, L,
 				**dict(
 					icon=ICON_URL,
 					draggable=False,
