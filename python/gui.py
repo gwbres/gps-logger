@@ -14,7 +14,8 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMainWindow
 from PyQt5.QtWidgets import QMenu, QAction
 from PyQt5.QtWidgets import QFileDialog, QDialog
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout
+from PyQt5.QtWidgets import QListWidget, QPushButton
 
 # pyqtgraph
 import pyqtgraph as pg
@@ -117,6 +118,10 @@ class MainWindow (QMainWindow):
 		d1 = Dock("Console", size=(1,1))
 		d1.addWidget(self.console)
 		docks.addDock(d1)
+
+		d12 = Dock("Track", size=(1,1))
+		d12.addWidget(self.buildTrackHandler())
+		docks.addDock(d12, "above", d1)
 		
 		d0 = Dock("Map", size=(1,2))
 		d0.hideTitleBar()
@@ -139,6 +144,23 @@ class MainWindow (QMainWindow):
 		self.resize(WIN_WIDTH,WIN_HEIGHT)
 		self.show()
 
+	def buildTrackHandler(self):
+		widget = QWidget()
+		qvboxlayout = QVBoxLayout()
+		self.qlist = QListWidget()
+		self.qlist.currentItemChanged.connect(self.listItemChanged)
+		qvboxlayout.addWidget(self.qlist)
+
+		_qhboxlayout = QHBoxLayout()
+		RM = QPushButton("remove")
+		RM.clicked.connect(self.removeClicked)
+		_qhboxlayout.addWidget(RM)
+		qvboxlayout.addLayout(_qhboxlayout)
+
+		widget.setLayout(qvboxlayout)
+		widget.show()
+		return widget
+
 	def open(self):
 		"""
 		Called when 'open' from toolbar was clicked
@@ -159,24 +181,27 @@ class MainWindow (QMainWindow):
 			return 0
 
 		files = self.qdialog.selectedFiles()
-		track = GPSTrack(files[0])
+		self.track = GPSTrack(files[0])
 		for fp in files[1:]:
-			t = GPSTrack(fp)
-			track.append(GPSTrack(fp).getWaypoints())
+			self.track.append(GPSTrack(fp).getWaypoints())
 		
 		self.clear() # clear previous plots
 
 		# visualize track on map
-		track.drawOnMap(self.map)
+		self.track.drawOnMap(self.map)
+
+		# track handler
+		for i in range(0, len(self.track)):
+			self.qlist.addItem(str(self.track[i]))
 
 		# instant speed
-		self.plots[1].plot(track.instantSpeed())
+		self.plots[1].plot(self.track.instantSpeed())
 
 		# accumulated distance
-		self.plots[2].plot(track.accumulatedDistance())
+		self.plots[2].plot(self.track.accumulatedDistance())
 		
 		# elevation profile
-		self.plots[0].plot(track.accumulatedDistance(), track.elevationProfile())
+		self.plots[0].plot(self.track.accumulatedDistance(), self.track.elevationProfile())
 		# draw line @ sea level
 		c1 = self.plots[0].getPlotItem().curves[0]
 		self.plots[0].plot([0,c1.getData()[0][-1]],[0,0]) # draw line @ sea level
@@ -192,6 +217,25 @@ class MainWindow (QMainWindow):
 		"""
 		for plt in self.plots:
 			plt.clear()
+
+	def removeClicked(self, clicked):
+		"""
+		Called when 'remove' was clicked
+		in the track handler
+		"""
+		if (clicked):
+			item = self.qlist.currentItem()
+
+	def listItemChanged(self, current, previous):
+		text = current.text()
+		# use date to retrieve waypoint
+		day = text.split(' ')[1]
+		time = text.split(' ')[2]
+		string = day+' '+time
+		format = '%Y-%m-%d %H:%M:%S'
+		date = datetime.datetime.strptime(string,format)
+		index = self.track.searchByDate(date)
+		print(index)
 
 	def close(self):
 		print("tut")
