@@ -364,3 +364,14 @@ class GPSTrack:
 			acc += self.waypoints[i].distance(self.waypoints[i-1])
 			x.append(acc)
 		return x
+
+	def searchByDate(self, date):
+		"""
+		Returns index of waypoint stored
+		at given date,
+		returns -1 if non existing
+		"""
+		for i in range(0, len(self.waypoints)):
+			if (self.waypoints[i].getDate() == date):
+				return i
+		return -1
