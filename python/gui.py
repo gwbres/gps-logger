@@ -63,8 +63,16 @@ class MainWindow (QMainWindow):
 		# map
 		mapWidget = QWidget()
 		self.map = QOSM(mapWidget)
+		self.map.markerClicked.connect(self.onMarkerClicks)
 		self.focused = None
-
+    	
+		"""
+		self.map.setSizePolicy(
+   	     QSizePolicy.MinimumExpanding,
+        	QSizePolicy.MinimumExpanding
+		)
+		"""
+		
 		# plots
 		self.plots = []
 
@@ -98,22 +106,6 @@ class MainWindow (QMainWindow):
 		p3.showGrid(x=True,y=True)
 		self.plots.append(p3)
 
-		"""
-		map.mapMoved.connect(onMapMoved)
-    	map.markerMoved.connect(onMarkerMoved)
-	   map.mapClicked.connect(onMapLClick)
-	   map.mapDoubleClicked.connect(onMapDClick)
-	   map.mapRightClicked.connect(onMapRClick)
-	   map.markerClicked.connect(onMarkerLClick)
-	   map.markerDoubleClicked.connect(onMarkerDClick)
-	   map.markerRightClicked.connect(onMarkerRClick)
-   	h.addWidget(map)
-    	map.setSizePolicy(
-   	     QSizePolicy.MinimumExpanding,
-        	QSizePolicy.MinimumExpanding)
-		)
-		"""
-		
 		docks = DockArea()
 		
 		d1 = Dock("Console", size=(1,1))
@@ -272,6 +264,32 @@ class MainWindow (QMainWindow):
 			)
 		
 		self.focused = self.track[index] 
+
+	def onMarkerClicks(self, key, lat, lon):
+		index = self.track.search(Waypoint(latDeg=lat,lonDeg=lon))
+		self.map.deleteMarker('current')
+		self.map.addMarker('current', lat, lon,
+			**dict(
+				icon="http://maps.gstatic.com/mapfiles/ridefinder-images/mm_20_blue.png",
+				draggable=False,
+				title="previous"
+			)
+		)
+
+		self.qlist.setCurrentRow(index)
+		
+		if (self.focused is not None):
+			self.map.deleteMarker('previous')
+
+			[l, L] = self.focused.toDecimalDegrees()
+			self.map.addMarker('previous', l, L,
+				**dict(
+					icon="http://maps.gstatic.com/mapfiles/ridefinder-images/mm_20_yellow.png",
+					draggable=False,
+					title="previous"
+				)
+			)
+		
 
 	def close(self):
 		print("tut")
