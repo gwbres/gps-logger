@@ -25,8 +25,7 @@ consumption.
 
 ![alt text](https://github.com/gwbres/gps-logger/blob/master/tests/GUI1.png)
 
-Use the project Wiki to learn how to use the API and
-much more.
+![Use the project Wiki to learn how to use the API and much more](https://github.com/gwbres/gps-logger/wiki)
 
 ### Getting started
 
