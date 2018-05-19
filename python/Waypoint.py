@@ -153,6 +153,18 @@ class Waypoint:
 		string += "Longitude: {:s}{:s}\n".format(lon[0],lon[1])
 		return string
 
+	def __eq__(self, wp):
+		"""
+		Returns true if GPS coordinates are
+		stricly identical
+		"""
+		[l0,L0] = self.toDecimalDegrees()
+		[l, L] = wp.toDecimalDegrees()
+		if (l0 == l):
+			if (L == L0):
+				return True
+		return False
+
 	def getLatitude(self):
 		return self.lat
 	
