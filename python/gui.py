@@ -45,14 +45,14 @@ class MainWindow (QMainWindow):
 		bar = self.menuBar()
 		# file
 		fileMenu = bar.addMenu("File")
-		action = QAction("Open/Append", fileMenu)
+		action = QAction("Open", fileMenu)
 		action.setShortcut("CTRL+O")
 		action.triggered.connect(self.open)
 		fileMenu.addAction(action)
 		
-		action = QAction("Close/Remove", fileMenu)
+		action = QAction("Clear", fileMenu)
 		action.setShortcut("CTRL+C")
-		action.triggered.connect(self.close)
+		action.triggered.connect(self.clear)
 		fileMenu.addAction(action)
 
 		action = QAction("Exit", fileMenu)
@@ -178,7 +178,7 @@ class MainWindow (QMainWindow):
 		for fp in files[1:]:
 			self.track.append(GPSTrack(fp).getWaypoints())
 		
-		self.clear() # clear previous plots
+		self.clearPlots() # clear previous plots
 
 		# visualize track on map
 		self.track.drawOnMap(self.map)
@@ -204,12 +204,35 @@ class MainWindow (QMainWindow):
 		self.elevFill = pg.FillBetweenItem(c1,c2,brush)
 		self.plots[0].addItem(self.elevFill)
 
-	def clear(self):
+	def clearPlots(self):
 		"""
 		Clears all plot
 		"""
 		for plt in self.plots:
 			plt.clear()
+
+	def clearMap(self):
+		"""
+		Removes all waypoints from GPS track
+		Removes focused markers
+		"""
+		for i in range(0, len(self.track)):
+			self.map.deleteMarker(str(i))
+
+		self.map.deleteMarker('current')
+		self.map.deleteMarker('previous')
+
+	def clear(self, clicked):
+		"""
+		Clears entire interface, including:
+			+ Plots
+			+ Map visualization
+			+ GPS Track interface
+		"""
+		self.clearPlots()
+		self.clearMap()
+		#self.qlist = QListWidget() # empty
+		self.qlist.clear()
 
 	def removeClicked(self, clicked):
 		"""
