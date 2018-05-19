@@ -269,15 +269,14 @@ class GPSTrack:
 		map.setZoom(14)
 		
 		for i in range(0, len(self.waypoints)):
-			if ((i%10) == 0):
-				[l,L] = self.waypoints[i].toDecimalDegrees()
-				map.addMarker("Marker", l, L,
-					**dict(
-						icon=ICON_URL,
-						draggable=False,
-						title="Waypoint {:d}".format(i)
-					)
+			[l,L] = self.waypoints[i].toDecimalDegrees()
+			map.addMarker("Marker", l, L,
+				**dict(
+					icon=ICON_URL,
+					draggable=False,
+					title="Waypoint {:d}".format(i)
 				)
+			)
 
 		[l0,L0] = self.waypoints[0].toDecimalDegrees()
 		map.centerAt(l0,L0)
