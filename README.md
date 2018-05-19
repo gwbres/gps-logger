@@ -1,6 +1,6 @@
-## Mini GPS data logger 
+## Mini GPS data logger
 
-The idea behind this project is to have a 
+The idea behind this project is to have a
 long lasting GPS data logger.
 
 The selected module is the PMTK3339 GPS receiver
@@ -14,26 +14,19 @@ consumption.
 
 * How to compile code for MSP430 devices
 * Use MSP430 features to reduce power consumption
+* 
 * Manipulate coordinates
 	* D° M' S"
 	* Decimal degrees
 	* etc.. 
 * Discover NMEA data 
 
-### Example of use
+### User interface
 
-```python
-track = GPSTrack("test.nmea")
-track.drawOnMap() # draws GPS Track on a map using geoplotlib
-```
+![alt text](tests/ui1.png)
 
-![alt text](tests/test1.png)
-
-```python
-track.drawOnMap(elevationProfile=true) # adds optional elevation profile
-```
-
-![alt text](tests/profile1.png)
+Use the project Wiki to learn how to use the API and
+much more.
 
 ### Getting started
 
@@ -49,67 +42,11 @@ compile the program with
 make
 ```
 
-### I use mspdebug to flash the program
+I use *mspdebug* and an MSP430 launchpad to program my MCUs:
 
 ```bash
 # mspdebug rf2500
 # erase
-# load main.elf
+# prog main.hex
 # run
 ```
-
-### PCB
-
-Board to control the GPS module with
-an MSP430 and two user buttons.
-
-![](PCB/top-bottom.png)
-
-### Python tool
-
-A python tool to control the PMKT module over
-serial port and manipulate .nmea data.
-
-```bash
-python3 python/tools.py --help
-```
-
-The script can send known commands to the module
-over serial port.
-
-```bash
-python3 python/tools.py /dev/ttyUSB0 --status
-python3 python/tools.py /dev/ttyUSB0 --start-logging
-```
-
-The script can convert .nmea files to .kml & .gpx
-files (kml: Google earth.., gpx: OpenStreetMap, GPSVisualizer..).
-
-```bash
-python3 python/tools.py --nmea-to-kml
-python3 python/tools.py --nmea-to-gpx
-python3 python/tools.py --nmea-to-kml --file=raw.nmea
-```
-
-The script allows to view data waypoints contained
-in a .nmea, a .kml or a .gpx file over a map, using
-"geoplotlib":
-
-```bash
-python3 python/tools.py --view-coordinates
-python3 python/tools.py --view-coordinates --file=raw.nmea
-python3 python/tools.py --view-coordinates --file=raw.kml
-```
-
-Elevation profile can optionnally be drawn:
-
-```bash
-python3 python/tools.py --view-coordinates --file=raw.nmea --elevation-profile
-```
-
-Required python packages to run the script:
-
-1. python >= 3
-2. pyserial
-3. geoplotlib <https://github.com/andrea-cuttone/geoplotlib>
-4. matplotlib
