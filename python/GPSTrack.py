@@ -1,7 +1,5 @@
 from Waypoint import *
 
-ICON_URL = "http://maps.gstatic.com/mapfiles/ridefinder-images/mm_20_gray.png"
-
 class GPSTrack:
 	"""
 	GPS track is a list of GPS waypoints
@@ -266,19 +264,50 @@ class GPSTrack:
 			+ zoom: should be based on totalDistance()
 		"""
 		
-		map.setZoom(14)
+		map.setZoom(11)
 		
+		# track visualization
 		for i in range(0, len(self.waypoints)):
 			[l,L] = self.waypoints[i].toDecimalDegrees()
+			if (i==0):
+				icon = "http://maps.google.com/mapfiles/kml/pal2/icon5.png"
+				[l0, L0] = [l,L]
+			elif (i==len(self.waypoints)-1):
+				icon = "http://maps.google.com/mapfiles/kml/pal2/icon13.png"
+			else:
+				icon = "http://labs.google.com/ridefinder/images/mm_20_gray.png"
+
 			map.addMarker("{:d}".format(i), l, L,
 				**dict(
-					icon=ICON_URL,
+					icon=icon,
 					draggable=False,
 					title="Waypoint {:d}".format(i)
 				)
 			)
 
-		[l0,L0] = self.waypoints[0].toDecimalDegrees()
+		# special markers
+		index = self.highestPoint()
+		[l, L] = self.waypoints[index].toDecimalDegrees()
+		icon="http://labs.google.com/ridefinder/images/mm_20_blue.png"
+		map.addMarker("highest", l, L,
+			**dict(
+				icon=icon,
+				draggable=False,
+				title="highest"
+			)
+		)
+
+		index = self.lowestPoint()
+		[l, L] = self.waypoints[index].toDecimalDegrees()
+		icon="http://labs.google.com/ridefinder/images/mm_20_purple.png"
+		map.addMarker("lowest", l, L,
+			**dict(
+				icon=icon,
+				draggable=False,
+				title="lowest"
+			)
+		)
+
 		map.centerAt(l0,L0)
 		map.center()
 		map.waitUntilReady()
@@ -350,7 +379,35 @@ class GPSTrack:
 				dt = self.waypoints[i].timeDiff(self.waypoints[i-1]).seconds
 				speed.append(d/dt)
 		return speed
-	
+
+	def highestPoint(self):
+		"""
+		Returns index of waypoint with
+		highest altitude
+		"""
+		index = 0
+		Max = -100
+		for i in range(0, len(self.waypoints)):
+			alt = float(self.waypoints[i].getAltitude())
+			if (alt > Max):
+				Max = alt
+				index = i
+		return index
+
+	def lowestPoint(self):
+		"""
+		Returns index of waypoint with
+		lowest altitude
+		"""
+		index = 0
+		Min = 1000
+		for i in range(0, len(self.waypoints)):
+			alt = float(self.waypoints[i].getAltitude())
+			if (alt < Min):
+				Min = alt
+				index = i
+		return index
+		
 	def accumulatedDistance(self):
 		"""
 		Returns accumulated distance
