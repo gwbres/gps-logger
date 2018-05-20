@@ -131,8 +131,8 @@ void init_gpio(void){
 
 void init_uart(void){
 	UCA0CTL1 |= UCSSEL_2; // SMCLK
-	UCA0BR0 = 0x08; // 115200b/s @1M
-	UCA0BR1 = 0x00; // 115200b/s @1M
+	UCA0BR0 = 109; // 9600 b/s @1M
+	UCA0BR1 = 0x00; // 9600 b/s @1M
 	UCA0MCTL = UCBRS2 + UCBRS0; // 5% modulation
 	UCA0CTL1 &= ~UCSWRST;
 	// disable ISR 
