@@ -223,10 +223,8 @@ class Waypoint:
 		Returns distance between self & another waypoint
 		using Harversine formula
 		"""
-		lat1 = float(self.getLatitude()[0])
-		lon1 = float(self.getLongitude()[0])
-		lat2 = float(wp.getLatitude()[0])
-		lon2 = float(wp.getLongitude()[0])
+		[lat1, lon1] = self.toDecimalDegrees()
+		[lat2, lon2] = wp.toDecimalDegrees()
 		deltaLat = math.radians(lat2)-math.radians(lat1)
 		deltaLon = math.radians(lon2)-math.radians(lon2)
 		lat1rad = math.radians(lat1)
