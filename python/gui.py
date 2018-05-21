@@ -123,15 +123,15 @@ class MainWindow (QMainWindow):
 		
 		d4 = Dock("Instant. speed", size=(1,1))
 		d4.addWidget(p1)
-		docks.addDock(d4,"bottom",d1)
 
 		d5 = Dock("Accumated. Distance", size=(1,1))
 		d5.addWidget(p3)
-		docks.addDock(d5,"above",d4)
 		
 		d2 = Dock("Elevation profile", size=(1,1))
 		d2.addWidget(p2)
-		docks.addDock(d2)
+		docks.addDock(d4)
+		docks.addDock(d5,"above",d4)
+		docks.addDock(d2,"above",d5)
 
 		self.setCentralWidget(docks)
 		self.resize(WIN_WIDTH,WIN_HEIGHT)
@@ -142,10 +142,11 @@ class MainWindow (QMainWindow):
 		qvboxlayout = QVBoxLayout()
 		self.qlist = QListWidget()
 		self.qlist.currentItemChanged.connect(self.listItemChanged)
+		#self.qlist.setSeletionModel(QAbstractItemView.MultiSelection)#|QAbstractItemView.ContiguousSelection)
 		qvboxlayout.addWidget(self.qlist)
 
 		_qhboxlayout = QHBoxLayout()
-		RM = QPushButton("remove")
+		RM = QPushButton("Remove")
 		RM.clicked.connect(self.removeClicked)
 		_qhboxlayout.addWidget(RM)
 		qvboxlayout.addLayout(_qhboxlayout)
@@ -239,8 +240,17 @@ class MainWindow (QMainWindow):
 		Called when 'remove' was clicked
 		in the track handler
 		"""
-		if (clicked):
-			item = self.qlist.currentItem()
+		item = self.qlist.currentItem()
+		text = item.text()
+		# use date to retrieve waypoint
+		day = text.split(' ')[1]
+		time = text.split(' ')[2]
+		string = day+' '+time
+		format = '%Y-%m-%d %H:%M:%S'
+		date = datetime.datetime.strptime(string,format)
+		index = self.track.searchByDate(date)
+		self.map.deleteMarker(str(index))
+		self.qlist.removeItemWidget(item)
 
 	def listItemChanged(self, current, previous):
 		text = current.text()
