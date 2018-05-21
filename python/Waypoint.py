@@ -148,9 +148,9 @@ class Waypoint:
 	def __str__(self):
 		lat = self.getLatitude()
 		lon = self.getLongitude()
-		string = "Date: {:s} | ".format(str(self.date))
-		string += "Latitude: {:s}{:s} | ".format(lat[0],lat[1])
-		string += "Longitude: {:s}{:s}\n".format(lon[0],lon[1])
+		string = "{:s}|".format(str(self.date))
+		string += "{:s}{:s}|".format(lat[0],lat[1])
+		string += "{:s}{:s}".format(lon[0],lon[1])
 		return string
 
 	def __eq__(self, wp):
