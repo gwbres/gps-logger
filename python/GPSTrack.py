@@ -330,7 +330,7 @@ class GPSTrack:
 			dist += self.waypoints[i].distance(self.waypoints[i-1])
 		return dist
 
-	def averageSpeed(self, w1=None, w2=None):
+	def averageSpeed(self, indexes=None):
 		"""
 		Returns average speed [m/s] over whole track
 		or between specified portion
@@ -339,21 +339,12 @@ class GPSTrack:
 		provide instant. projected speed value,
 		should we use it?
 		"""
+		if (indexes is None):
+			index1 = 0
+			index2 = len(self.waypoints)
+		
 		speed = 0.0
-		
-		if w1 is None:
-			w1 = 1
-		else:
-			if (w1 > len(self.waypoints)):
-				w1 = len(self.waypoints)-1
-
-		if w2 is None:
-			w2 = len(self.waypoints)
-		else:
-			if (w2 > len(self.waypoints)):
-				w2 = len(self.waypoints)
-		
-		for i in range(w1,w2):
+		for i in range(index1,index2):
 			d = self.waypoints[i].distance(self.waypoints[i-1])/1000
 			dt = self.waypoints[i].timeDiff(self.waypoints[i-1]).seconds
 			speed += d/dt 
