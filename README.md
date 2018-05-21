@@ -23,9 +23,9 @@ consumption.
 
 ### User interface
 
-![alt text](https://github.com/gwbres/gps-logger/blob/master/tests/GUI1.png)
+<img=https://github.com/gwbres/gps-logger/blob/master/tests/gui2.png width="600" height="380"></img>
 
-[Use the project Wiki to learn how to use the API and much more](https://github.com/gwbres/gps-logger/wiki)
+[Use the project Wiki to learn how to use the GUI & the API](https://github.com/gwbres/gps-logger/wiki)
 
 ### Getting started
 
