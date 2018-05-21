@@ -312,6 +312,26 @@ class GPSTrack:
 		map.center()
 		map.waitUntilReady()
 
+	def highlightOnMap(self, map, index1, index2, icon=None):
+		"""
+		Highlist given waypoints on map
+		between given indexes (included)
+		"""
+
+		if (icon is None):
+			icon="http://maps.gstatic.com/mapfiles/ridefinder-images/mm_20_orange.png"
+
+		for i in range(index1,index2):
+			[l, L] = self.waypoints[i].toDecimalDegrees()
+
+			map.addMarker("highlight{:d}".format(i), l, L,
+				**dict(
+					icon=icon,
+					draggable=False,
+					title="highlight{:d}".format(i)
+				)
+			)
+
 	def elevationProfile(self):
 		"""
 		Returns all waypoints altitude

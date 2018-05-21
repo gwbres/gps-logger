@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import QMainWindow
 from PyQt5.QtWidgets import QMenu, QAction
 from PyQt5.QtWidgets import QFileDialog, QDialog
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout
-from PyQt5.QtWidgets import QTreeWidget, QTreeWidgetItem
+from PyQt5.QtWidgets import QTreeWidget, QTreeWidgetItem, QAbstractItemView
 from PyQt5.QtWidgets import QPushButton
 
 # pyqtgraph
@@ -65,7 +65,7 @@ class MainWindow (QMainWindow):
 		mapWidget = QWidget()
 		self.map = QOSM(mapWidget)
 		self.map.markerClicked.connect(self.onMarkerClicks)
-		self.focused = None
+		self.highlights = None
     	
 		"""
 		self.map.setSizePolicy(
@@ -142,10 +142,14 @@ class MainWindow (QMainWindow):
 		widget = QWidget()
 		qvboxlayout = QVBoxLayout()
 		self.qtree = QTreeWidget()
+
 		header = QTreeWidgetItem(["date","latitude","longitude"])
 		self.qtree.setHeaderItem(header)
+		self.qtree.setSelectionMode(
+			QAbstractItemView.SingleSelection|QAbstractItemView.MultiSelection
+		)
+
 		self.qtree.currentItemChanged.connect(self.listItemChanged)
-		#self.qtree.setSeletionModel(QAbstractItemView.MultiSelection)#|QAbstractItemView.ContiguousSelection)
 		qvboxlayout.addWidget(self.qtree)
 
 		_qhboxlayout = QHBoxLayout()
@@ -224,9 +228,6 @@ class MainWindow (QMainWindow):
 		for i in range(0, len(self.track)):
 			self.map.deleteMarker(str(i))
 
-		self.map.deleteMarker('current')
-		self.map.deleteMarker('previous')
-
 	def clear(self, clicked):
 		"""
 		Clears entire interface, including:
@@ -253,25 +254,30 @@ class MainWindow (QMainWindow):
 		self.qtree.removeItemWidget(item)
 
 	def listItemChanged(self, current, previous):
-		# use date to retrieve waypoint
-		text = current.text(0)
-		format = '%Y-%m-%d %H:%M:%S'
-		date = datetime.datetime.strptime(text,format)
-		index = self.track.searchByDate(date)
-		[l, L] = self.track[index].toDecimalDegrees()
-		
-		# add red marker where focused
-		self.map.deleteMarker('current')
+		if (len(self.qtree.selectedItems()) == 0):
+			return -1
 
-		self.map.addMarker('current', l, L, 
-			**dict(
-				icon="http://maps.gstatic.com/mapfiles/ridefinder-images/mm_20_red.png",
-				draggable=False,
-				title="focus"
+		items = []
+		if (len(self.qtree.selectedItems()) == 1):
+			items.append(self.qtree.selectedItems()[0])
+			items.append(self.qtree.itemBelow(self.qtree.selectedItems()[0]))
+		else:
+			items = [self.qtree.selectedItems()[0]] # currently highlighted
+			items.append(self.qtree.selectedItems()[-1])
+
+		indexes = []
+		for item in items:
+			# use date to retrieve waypoint
+			date = datetime.datetime.strptime(
+				item.text(0), # date
+				'%Y-%m-%d %H:%M:%S'
 			)
-		)
 
-		# add point on elevation profile where we're at
+			indexes.append(self.track.searchByDate(date))
+
+		self.track.highlightOnMap(self.map, indexes[0], indexes[1])
+		
+		# indicate current selection on elevation profile
 		elevationProfile = self.plots[0].getPlotItem()
 		curves = elevationProfile.curves
 		if (len(curves) > 2):
@@ -279,22 +285,8 @@ class MainWindow (QMainWindow):
 			del curves[-1]
 
 		[xp,yp] = curves[0].getData()
-		self.plots[0].plot([xp[index]],[yp[index]],symbol='o')
-
-		if (self.focused is not None):
-			self.map.deleteMarker('previous')
-
-			[l, L] = self.focused.toDecimalDegrees()
-			self.map.addMarker('previous', l, L,
-				**dict(
-					icon="http://maps.gstatic.com/mapfiles/ridefinder-images/mm_20_yellow.png",
-					draggable=False,
-					title="previous"
-				)
-			)
+		self.plots[0].plot([xp[indexes[-1]]],[yp[indexes[-1]]],symbol='o')
 		
-		self.focused = self.track[index] 
-
 	def onMarkerClicks(self, key, lat, lon):
 		index = self.track.search(Waypoint(latDeg=lat,lonDeg=lon))
 		self.map.deleteMarker('current')
@@ -309,19 +301,6 @@ class MainWindow (QMainWindow):
 		item = QTreeWidgetItem(self.qtree, str(self.track[index]).split('|'))
 		self.qtree.setCurrentItem(item)
 		
-		if (self.focused is not None):
-			self.map.deleteMarker('previous')
-
-			[l, L] = self.focused.toDecimalDegrees()
-			self.map.addMarker('previous', l, L,
-				**dict(
-					icon="http://maps.gstatic.com/mapfiles/ridefinder-images/mm_20_yellow.png",
-					draggable=False,
-					title="previous"
-				)
-			)
-		
-
 	def close(self):
 		print("tut")
 	
