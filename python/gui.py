@@ -15,7 +15,8 @@ from PyQt5.QtWidgets import QMainWindow
 from PyQt5.QtWidgets import QMenu, QAction
 from PyQt5.QtWidgets import QFileDialog, QDialog
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout
-from PyQt5.QtWidgets import QListWidget, QPushButton
+from PyQt5.QtWidgets import QTreeWidget, QTreeWidgetItem
+from PyQt5.QtWidgets import QPushButton
 
 # pyqtgraph
 import pyqtgraph as pg
@@ -140,10 +141,12 @@ class MainWindow (QMainWindow):
 	def buildTrackHandler(self):
 		widget = QWidget()
 		qvboxlayout = QVBoxLayout()
-		self.qlist = QListWidget()
-		self.qlist.currentItemChanged.connect(self.listItemChanged)
-		#self.qlist.setSeletionModel(QAbstractItemView.MultiSelection)#|QAbstractItemView.ContiguousSelection)
-		qvboxlayout.addWidget(self.qlist)
+		self.qtree = QTreeWidget()
+		header = QTreeWidgetItem(["date","latitude","longitude"])
+		self.qtree.setHeaderItem(header)
+		self.qtree.currentItemChanged.connect(self.listItemChanged)
+		#self.qtree.setSeletionModel(QAbstractItemView.MultiSelection)#|QAbstractItemView.ContiguousSelection)
+		qvboxlayout.addWidget(self.qtree)
 
 		_qhboxlayout = QHBoxLayout()
 		RM = QPushButton("Remove")
@@ -186,7 +189,8 @@ class MainWindow (QMainWindow):
 
 		# track handler
 		for i in range(0, len(self.track)):
-			self.qlist.addItem(str(self.track[i]))
+			item = QTreeWidgetItem(self.qtree, str(self.track[i]).split('|'))
+			self.qtree.addTopLevelItem(item)
 
 		# instant speed
 		self.plots[1].plot(self.track.instantSpeed())
@@ -232,34 +236,27 @@ class MainWindow (QMainWindow):
 		"""
 		self.clearPlots()
 		self.clearMap()
-		#self.qlist = QListWidget() # empty
-		self.qlist.clear()
+		#self.qtree = QListWidget() # empty
+		self.qtree.clear()
 
 	def removeClicked(self, clicked):
 		"""
 		Called when 'remove' was clicked
 		in the track handler
 		"""
-		item = self.qlist.currentItem()
-		text = item.text()
-		# use date to retrieve waypoint
-		day = text.split(' ')[1]
-		time = text.split(' ')[2]
-		string = day+' '+time
+		item = self.qtree.currentItem()
+		text = item.text(0)
 		format = '%Y-%m-%d %H:%M:%S'
-		date = datetime.datetime.strptime(string,format)
+		date = datetime.datetime.strptime(text,format)
 		index = self.track.searchByDate(date)
 		self.map.deleteMarker(str(index))
-		self.qlist.removeItemWidget(item)
+		self.qtree.removeItemWidget(item)
 
 	def listItemChanged(self, current, previous):
-		text = current.text()
 		# use date to retrieve waypoint
-		day = text.split(' ')[1]
-		time = text.split(' ')[2]
-		string = day+' '+time
+		text = current.text(0)
 		format = '%Y-%m-%d %H:%M:%S'
-		date = datetime.datetime.strptime(string,format)
+		date = datetime.datetime.strptime(text,format)
 		index = self.track.searchByDate(date)
 		[l, L] = self.track[index].toDecimalDegrees()
 		
@@ -309,7 +306,8 @@ class MainWindow (QMainWindow):
 			)
 		)
 
-		self.qlist.setCurrentRow(index)
+		item = QTreeWidgetItem(self.qtree, str(self.track[index]).split('|'))
+		self.qtree.setCurrentItem(item)
 		
 		if (self.focused is not None):
 			self.map.deleteMarker('previous')
