@@ -1,5 +1,5 @@
 /*
-	Guillaume W. Bres, 2018  <guillaume.bressaix@gmail.com>
+	Guillaume W. Bres, 2018  <guillaume.bres@noisext.com>
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
